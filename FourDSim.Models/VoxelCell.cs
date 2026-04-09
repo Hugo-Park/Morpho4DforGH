@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Rhino.Geometry;
 using System.Linq;
 using System;
+using Grasshopper.Kernel.Types;
 
 namespace FourDSim.Models
 {
@@ -36,7 +37,7 @@ namespace FourDSim.Models
 
             for (double x = bbox.Min.X; x <= bbox.Max.X; x += size)
             {
-                for (double y = bbox.Min.Y; x <= bbox.Max.Y; y += size)
+                for (double y = bbox.Min.Y; y <= bbox.Max.Y; y += size)
                 {
                     for (double z = bbox.Min.Z; z <= bbox.Max.Z; z += size)
                     {
@@ -53,14 +54,14 @@ namespace FourDSim.Models
 
             return result;
         }
-  
+
         /// <summary>
         /// showVoxels(List&lt;VoxelCell&gt; voxel_list, double size)
         /// VoxelCell 객체 리스트를 받아서 중심점을 기준으로 size 만큼 mesh box를 만든다.
         /// </summary>
         /// <param name="voxel_list">VoxelCell 리스트</param>
         /// <param name="size">정육면체 한 변의 길이</param>
-        /// <returns></returns>
+        /// <returns>Mesh -> 데이터가 합쳐진 메쉬</returns>
         public static Mesh showVoxels(List<VoxelCell> voxel_list, double size)
         {
             Mesh result = new Mesh(); // 최종 Mesh (하나의 Mesh로 합쳐짐)
@@ -79,6 +80,29 @@ namespace FourDSim.Models
             }
 
             return result;
+        }
+    }
+
+    /// <summary>
+    /// VoxelCell 데이터를 Grasshopper로 전송하기 위한 일종의 포장지 class
+    /// IGH_Goo를 사용하여 커스텀 데이터를 효율적으로 사용 가능
+    /// </summary>
+    
+    public class VoxelCellGoo : GH_Goo<VoxelCell>
+    {
+        public VoxelCellGoo() { }
+        public VoxelCellGoo(VoxelCell v) : base(v) { }
+
+        public override bool IsValid => Value != null;
+        public override string TypeName => "VoxelCell";
+        public override string TypeDescription => "4D Printing Simulation Voxel Cells";
+        public override IGH_Goo Duplicate()
+        {
+            return new VoxelCellGoo(Value);
+        }
+        public override string ToString()
+        {
+            return this.GetType().FullName;
         }
     }
 }
