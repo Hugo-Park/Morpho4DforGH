@@ -6,6 +6,7 @@ using Grasshopper.Kernel;
 using Rhino.Geometry;
 
 using FourDSim.Models;
+using Rhino.Commands;
 
 namespace _4DPrintSim
 {
@@ -50,6 +51,26 @@ namespace _4DPrintSim
         /// to store data in output parameters.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
+            Brep input_brep = null;
+            double voxel_size = 1.0;
+
+            if (!DA.GetData(0, ref input_brep)) { return; }
+            if (!DA.GetData(1, ref voxel_size)) { return; }
+
+            List<VoxelCell> result = FourDSim.Models.Voxelizer.CreateVoxels(input_brep, voxel_size);
+
+            List<VoxelCellGoo> goos = new List<VoxelCellGoo>();
+
+            int count = 0;
+            foreach (VoxelCell v in result)
+            {
+                VoxelCellGoo package = new VoxelCellGoo(v);
+                goos.Add(package);
+                count++;
+            }
+
+            DA.SetDataList(0, goos);
+            DA.SetData(1, count);
         }
 
         /// <summary>
