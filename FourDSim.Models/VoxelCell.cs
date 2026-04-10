@@ -29,7 +29,7 @@ namespace FourDSim.Models
         /// <param name="input_brep">입력 Brep</param>
         /// <param name="size">복셀의 크기 (클수록 점의 개수 줄어듦)</param>
         /// <returns>List&lt;VoxelCell&gt; result</returns>
-        public static List<VoxelCell> CreateVoxels(Brep input_brep, double size)
+        public static List<VoxelCell> createVoxels(Brep input_brep, double size)
         {
             List<VoxelCell> result = new List<VoxelCell>();
             BoundingBox bbox = input_brep.GetBoundingBox(true);
