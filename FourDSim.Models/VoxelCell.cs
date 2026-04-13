@@ -22,14 +22,14 @@ namespace FourDSim.Models
     public static class Voxelizer
     {
         /// <summary>
-        /// CreateVoxels(Brep input_brep, double size)
+        /// createVoxels(Brep input_brep, double size)
         /// BoundingBox 생성 후 정한 size 만큼의 간격을 건너뛰며 점을 생성
         /// -> 3중 루프를 돌며 IsPointInside 로 Brep 내의 점인지 확인 -> 맞으면 VoxelCell 객체 생성
         /// </summary>
         /// <param name="input_brep">입력 Brep</param>
         /// <param name="size">복셀의 크기 (클수록 점의 개수 줄어듦)</param>
         /// <returns>List&lt;VoxelCell&gt; result</returns>
-        public static List<VoxelCell> CreateVoxels(Brep input_brep, double size)
+        public static List<VoxelCell> createVoxels(Brep input_brep, double size)
         {
             List<VoxelCell> result = new List<VoxelCell>();
             BoundingBox bbox = input_brep.GetBoundingBox(true);

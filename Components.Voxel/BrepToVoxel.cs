@@ -57,7 +57,7 @@ namespace _4DPrintSim
             if (!DA.GetData(0, ref input_brep)) { return; }
             if (!DA.GetData(1, ref voxel_size)) { return; }
 
-            List<VoxelCell> result = FourDSim.Models.Voxelizer.CreateVoxels(input_brep, voxel_size);
+            List<VoxelCell> result = FourDSim.Models.Voxelizer.createVoxels(input_brep, voxel_size);
 
             List<VoxelCellGoo> goos = new List<VoxelCellGoo>();
 
