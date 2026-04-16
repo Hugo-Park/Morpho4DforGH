@@ -33,13 +33,13 @@ namespace _4DPrintSim
 
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            Brep input_brep = null;
-            double voxel_size = 1.0;
+            Brep inputBrep = null;
+            double voxelSize = 1.0;
 
-            if (!DA.GetData(0, ref input_brep)) { return; }
-            if (!DA.GetData(1, ref voxel_size)) { return; }
+            if (!DA.GetData(0, ref inputBrep)) { return; }
+            if (!DA.GetData(1, ref voxelSize)) { return; }
 
-            List<VoxelCell> result = FourDSim.Models.Voxelizer.createVoxels(input_brep, voxel_size);
+            List<VoxelCell> result = FourDSim.Models.Voxelizer.createVoxels(inputBrep, voxelSize);
 
             List<VoxelCellGoo> goos = new List<VoxelCellGoo>();
 

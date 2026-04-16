@@ -31,27 +31,27 @@ namespace _4DPrintSim
         protected override void SolveInstance(IGH_DataAccess DA)
         {
             List<VoxelCellGoo> goos = new List<VoxelCellGoo>();
-            List<Point3d> voxel_point = new List<Point3d>();
+            List<Point3d> voxelPoint = new List<Point3d>();
             double size = 1.0;
 
             if (!DA.GetDataList(0, goos)) { return; }
             if (!DA.GetData(1, ref size)) { return; }
 
-            List<VoxelCell> voxel_list = new List<VoxelCell>();
+            List<VoxelCell> voxelList = new List<VoxelCell>();
 
             foreach (VoxelCellGoo goo in goos)
             {
                 if (goo != null && goo.Value != null)
                 {
-                    voxel_list.Add(goo.Value);
-                    voxel_point.Add(goo.Value.initial_point);
+                    voxelList.Add(goo.Value);
+                    voxelPoint.Add(goo.Value.initialPoint);
                 }
             }
 
-            Mesh visual_mesh = FourDSim.Models.Voxelizer.showVoxels(voxel_list, size);
+            Mesh visualMesh = FourDSim.Models.Voxelizer.showVoxels(voxelList, size);
 
-            DA.SetData(0, visual_mesh);
-            DA.SetDataList(1, voxel_point);
+            DA.SetData(0, visualMesh);
+            DA.SetDataList(1, voxelPoint);
 
         }
 
