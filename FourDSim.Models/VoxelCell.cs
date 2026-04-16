@@ -13,9 +13,9 @@ namespace FourDSim.Models
         public Vector3d expectedMove { get; set; } // 예상 변형 (벡터)
         public VoxelCell(int id, Point3d position)
         {
-            Id = id;
-            initialPoint = position;
-            expectedMove = new Vector3d(0, 0, 0);
+            this.Id = id;
+            this.initialPoint = position;
+            this.expectedMove = new Vector3d(0, 0, 0);
         }
     }
 
