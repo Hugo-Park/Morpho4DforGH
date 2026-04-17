@@ -17,9 +17,9 @@
   <PropertyGroup>
     <!-- Specifies information for Assembly and Yak -->
     <Version>1.0</Version>
-    <Title>4DPrintSim</Title>
-    <Company>4DPrintSim Authors</Company>
-    <Description>Description of 4DPrintSim</Description>
+    <Title>Morpho4D</Title>
+    <Company>Morpho4D Authors</Company>
+    <Description>Description of Morpho4D</Description>
   </PropertyGroup>
   
   <ItemGroup>
