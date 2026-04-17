@@ -5,17 +5,17 @@ using Grasshopper;
 using Grasshopper.Kernel;
 using Rhino.Geometry;
 
-using FourDSim.Models;
+using Morpho4D.Models;
 using Rhino.Commands;
 
-namespace _4DPrintSim
+namespace _Morpho4D
 {
     public class BrepToVoxel : GH_Component
     {
         public BrepToVoxel()
           : base("Brep to Voxel", "B/V",
             "Convert Brep objects to Voxels",
-            "4DPrintSim", "Voxel")
+            "Morpho4D", "Voxel")
         {
         }
 
@@ -39,7 +39,7 @@ namespace _4DPrintSim
             if (!DA.GetData(0, ref inputBrep)) { return; }
             if (!DA.GetData(1, ref voxelSize)) { return; }
 
-            List<VoxelCell> result = FourDSim.Models.Voxelizer.createVoxels(inputBrep, voxelSize);
+            List<VoxelCell> result = Morpho4D.Models.Voxelizer.createVoxels(inputBrep, voxelSize);
 
             List<VoxelCellGoo> goos = new List<VoxelCellGoo>();
 

@@ -4,7 +4,7 @@ using System.Linq;
 using System;
 using Grasshopper.Kernel.Types;
 
-namespace FourDSim.Models
+namespace Morpho4D.Models
 {
     public class VoxelCell
     {

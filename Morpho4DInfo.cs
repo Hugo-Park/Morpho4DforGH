@@ -3,11 +3,11 @@ using System.Drawing;
 using Grasshopper;
 using Grasshopper.Kernel;
 
-namespace _4DPrintSim
+namespace _Morpho4D
 {
-  public class _4DPrintSimInfo : GH_AssemblyInfo
+  public class _Morpho4DInfo : GH_AssemblyInfo
   {
-    public override string Name => "4DPrintSim Info";
+    public override string Name => "Morpho4D Info";
 
     //Return a 24x24 pixel bitmap to represent this GHA library.
     public override Bitmap Icon => null;

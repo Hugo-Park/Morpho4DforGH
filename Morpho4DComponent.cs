@@ -5,9 +5,9 @@ using Grasshopper;
 using Grasshopper.Kernel;
 using Rhino.Geometry;
 
-namespace _4DPrintSim
+namespace _Morpho4D
 {
-  public class _4DPrintSimComponent : GH_Component
+  public class _Morpho4DComponent : GH_Component
   {
     /// <summary>
     /// Each implementation of GH_Component must provide a public 
@@ -16,8 +16,8 @@ namespace _4DPrintSim
     /// Subcategory the panel. If you use non-existing tab or panel names, 
     /// new tabs/panels will automatically be created.
     /// </summary>
-    public _4DPrintSimComponent()
-      : base("4DPrintSim Component", "Nickname",
+    public _Morpho4DComponent()
+      : base("Morpho4D Component", "Nickname",
         "Description of component",
         "Category", "Subcategory")
     {

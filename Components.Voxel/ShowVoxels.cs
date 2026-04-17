@@ -1,18 +1,18 @@
 using System;
 using System.Collections.Generic;
-using FourDSim.Models;
+using Morpho4D.Models;
 using Grasshopper;
 using Grasshopper.Kernel;
 using Rhino.Geometry;
 
-namespace _4DPrintSim
+namespace _Morpho4D
 {
     public class ShowVoxels : GH_Component
     {
         public ShowVoxels()
           : base("Show Voxels", "SV",
             "Show converted Voxels",
-            "4DPrintSim", "Voxel")
+            "Morpho4D", "Voxel")
         {
         }
 
@@ -48,7 +48,7 @@ namespace _4DPrintSim
                 }
             }
 
-            Mesh visualMesh = FourDSim.Models.Voxelizer.showVoxels(voxelList, size);
+            Mesh visualMesh = Morpho4D.Models.Voxelizer.showVoxels(voxelList, size);
 
             DA.SetData(0, visualMesh);
             DA.SetDataList(1, voxelPoint);
