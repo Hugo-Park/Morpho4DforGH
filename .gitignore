@@ -6,3 +6,4 @@ obj/
 *.gha
 *.pdb
 packages/
+.DS_Store
