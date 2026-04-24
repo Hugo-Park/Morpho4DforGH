@@ -102,6 +102,7 @@ namespace Morpho4D.Models
         {
             return this.diffusionCoefficient * gradient * deltaTime;
             // gradient, deletaTime 변수는 나중에 Solver 컴포넌트 인풋에서 입력함
+            // 나중에 Solver 컴포넌트에서 (함수의 반환값 * 삼투압) = (재료가 실제 팽창하는 힘) 이렇게 계산됨
         }
 
         /*생성자*/

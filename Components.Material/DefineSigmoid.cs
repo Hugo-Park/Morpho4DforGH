@@ -8,10 +8,10 @@ using Morpho4D.Models;
 
 namespace _Morpho4D
 {
-    public class Sigmoid : GH_Component
+    public class DefineSigmoid : GH_Component
     {
-        public Sigmoid()
-          : base("Sigmoid", "SM",
+        public DefineSigmoid()
+          : base("Define Sigmoid", "SM",
             "Calculate Young's modulus using a sigmoid-based transition model.",
             "Morpho4D", "Material")
         {
@@ -19,15 +19,15 @@ namespace _Morpho4D
 
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
-            pManager.AddNumberParameter("GlassTransTemp", "Tg", "Glass Transition Temperature : The critical temperature at which the material transitions from a hard, glassy state to a soft, rubbery state.", GH_ParamAccess.item);
-            pManager.AddNumberParameter("GlassyModulus", "Eg", "Glassy Modulus : The maximum Young's Modulus of the material when it is in its stiff, low-temperature state.", GH_ParamAccess.item);
-            pManager.AddNumberParameter("RubberyModulus", "Er", "RubberyModulus : The minimum Young's Modulus of the material when it is in its flexible, high-temperature state.", GH_ParamAccess.item);
-            pManager.AddNumberParameter("Steepness", "k", "Steepness : A coefficient that determines how rapidly the material stiffness changes around the transition temperature.", GH_ParamAccess.item);
+            pManager.AddNumberParameter("Glass Transition Temperature", "Tg", "The critical temperature at which the material transitions from a hard, glassy state to a soft, rubbery state.", GH_ParamAccess.item, 60.0);
+            pManager.AddNumberParameter("Glassy Modulus", "Eg", "The maximum Young's Modulus of the material when it is in its stiff, low-temperature state.", GH_ParamAccess.item, 2000.0);
+            pManager.AddNumberParameter("Rubbery Modulus", "Er", "The minimum Young's Modulus of the material when it is in its flexible, high-temperature state.", GH_ParamAccess.item, 20.0);
+            pManager.AddNumberParameter("Steepness", "k", "A coefficient that determines how rapidly the material stiffness changes around the transition temperature.", GH_ParamAccess.item, 1.0);
         }
 
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
-            pManager.AddGenericParameter("SigmoidModel", "SM", "Settings for sigmoid method", GH_ParamAccess.item);
+            pManager.AddGenericParameter("Sigmoid Model", "SM", "Settings for sigmoid method", GH_ParamAccess.item);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)

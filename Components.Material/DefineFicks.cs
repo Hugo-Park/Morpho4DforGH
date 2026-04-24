@@ -8,25 +8,25 @@ using Morpho4D.Models;
 
 namespace _Morpho4D
 {
-    public class Ficks : GH_Component
+    public class DefineFicks : GH_Component
     {
-        public Ficks()
-          : base("Ficks", "F",
-            "Calculate hydraional level using Fick's law of diffusion",
+        public DefineFicks()
+          : base("Define Fick's", "F's",
+            "Calculate hydrational level using Fick's law of diffusion",
             "Morpho4D", "Material")
         {
         }
 
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
-            pManager.AddNumberParameter("Diffusion Coefficient", "D", "A physical constant that determines the speed at which moisture spreads through the hydrogel material (mm^2/s)", GH_ParamAccess.item);
-            pManager.AddNumberParameter("Max Hydration", "Hmax", "The maximum capacity of moisture the hydrogel can absorb, serving as the upper limit for the swelling simulation.", GH_ParamAccess.item);
-            pManager.AddNumberParameter("Saturation Limit", "Cs", "The fixed concentration level at the material's surface, representing external environmental stimuli (e.g., 1.0 for immersion in water).", GH_ParamAccess.item);
+            pManager.AddNumberParameter("Diffusion Coefficient", "D", "A physical constant that determines the speed at which moisture spreads through the hydrogel material(mm^2/s).", GH_ParamAccess.item, 0.05);
+            pManager.AddNumberParameter("Max Hydration", "Hmax", "The maximum capacity of moisture the hydrogel can absorb, serving as the upper limit for the swelling simulation.", GH_ParamAccess.item, 1.0);
+            pManager.AddNumberParameter("Saturation Limit", "Cs", "The fixed concentration level at the material's surface, representing external environmental stimuli (e.g., 1.0 for immersion in water).", GH_ParamAccess.item, 1.0);
         }
 
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
-            pManager.AddGenericParameter("Ficks Model", "Fm", "Settings for Fick's law of diffusion", GH_ParamAccess.item);
+            pManager.AddGenericParameter("Fick's Model", "Fm", "Settings for Fick's law of diffusion", GH_ParamAccess.item);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
