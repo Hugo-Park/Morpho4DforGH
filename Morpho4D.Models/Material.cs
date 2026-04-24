@@ -53,14 +53,21 @@ namespace Morpho4D.Models
         }
 
         /*생성자*/
-        public SmpMat(string name, Color color, double youngsMod, double poisson, double glassTemp)
+        public SmpMat(string name, Color color, double youngsMod, double poisson, double minSwelling, double maxSwelling, SigmoidModel sigmoidModel)
             : base(name, color, youngsMod, poisson)
         {
-            this.glassTransTemp = glassTemp;
-            this.glassyModulus = youngsMod; // 일단 glassyModulus를 기본으로 설정
-            this.rubberyModulus = youngsMod / 100.0; // 일단 100배 부드럽다고 설정
-            this.steepness = 1.0;
-            this.defaultYoungsModulus = updateSmpYoungsModulus(25.0); // 상온 기준으로 한번 업데이트 해줌
+            this.maxSwellingRatio = maxSwelling;
+            this.minSwellingRatio = minSwelling;
+
+            if (sigmoidModel != null)
+            {
+                this.glassTransTemp = sigmoidModel.Tg;
+                this.glassyModulus = sigmoidModel.Eg;
+                this.rubberyModulus = sigmoidModel.Er;
+                this.steepness = sigmoidModel.k;
+                this.defaultYoungsModulus = updateSmpYoungsModulus(25.0); // 상온 기준으로 한번 업데이트 해줌
+            }
+
         }
     }
 
@@ -84,22 +91,46 @@ namespace Morpho4D.Models
         public double maxSwellingRatio { get; set; } // 최대 팽창 비율
         public double minSwellingRatio { get; set; } // 최소 팽창 비율
         public double osmoticPressure { get; set; } // 삼투압
-        public double diffusionRate { get; set; } // Fick의 확산 법칙 변수
+
+        /*Fick의 확산법칙 구현 변수*/
+        public double diffusionCoefficient { get; set; } // 확산 계수
+        public double maxHydration { get; set; } // 가질 수 있는 최대 농도
+        public double saturationLimit { get; set; } // 표면 농도
 
         /*Fick의 확산법칙 구현(컴포넌트 분리 필요)*/
         public double updateHydrationLevel(double gradient, double deltaTime)
         {
-            return this.diffusionRate * gradient * deltaTime;
+            return this.diffusionCoefficient * gradient * deltaTime;
+            // gradient, deletaTime 변수는 나중에 Solver 컴포넌트 인풋에서 입력함
         }
 
         /*생성자*/
-        public HydrogelMat(string name, Color color, double youngsMod, double poisson, double maxSwelling, double minSwelling, double osmoPressure, double diffusRate)
+        public HydrogelMat(string name, Color color, double youngsMod, double poisson, double maxSwelling, double minSwelling, double osmoPressure, FicksModel diffusionModel)
             : base(name, color, youngsMod, poisson)
         {
-            maxSwellingRatio = maxSwelling;
-            minSwellingRatio = minSwelling;
-            osmoticPressure = osmoPressure;
-            diffusionRate = diffusRate;
+            this.maxSwellingRatio = maxSwelling;
+            this.minSwellingRatio = minSwelling;
+            this.osmoticPressure = osmoPressure;
+
+            if (diffusionModel != null)
+            {
+                this.diffusionCoefficient = diffusionModel.D;
+                this.maxHydration = diffusionModel.HMax;
+                this.saturationLimit = diffusionModel.Cs;
+            }
+        }
+    }
+
+    public class FicksModel
+    {
+        public double D { get; set; }
+        public double HMax { get; set; }
+        public double Cs { get; set; }
+        public FicksModel(double d, double hmax, double cs)
+        {
+            this.D = d;
+            this.HMax = hmax;
+            this.Cs = cs;
         }
     }
 }
