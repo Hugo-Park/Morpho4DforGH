@@ -4,17 +4,18 @@ using System.Linq;
 using System;
 using Grasshopper.Kernel.Types;
 using System.Drawing;
+using Morpho4D.Models;
 
 namespace Morpho4D.Models
 {
-    public class Material
+    public abstract class Material
     {
         /*기본 정보*/
         public string materialName { get; set; } // 재료 이름
         public Color previewColor { get; set; } // preview 색상
 
         /*재료 공통 속성*/
-        public virtual double youngsModulus { get; set; } // 재료의 강성
+        public double youngsModulus { get; set; } // 재료의 강성
         public double poissonRatio { get; set; } // 포아송 비
         public Material(string name, Color color, double youngsMod, double poisson)
         {
@@ -24,7 +25,9 @@ namespace Morpho4D.Models
             this.poissonRatio = poisson;
         }
 
-        /*특정 재료(smp, hydrogel) 속성은 상속을 통해 부여받는다*/
+        /*추상 함수 선언: updateProperties()*/
+        public abstract void evaluateState(VoxelCell voxel, double t, double currentTemp);
+        // 변수 t는 solver 컴포넌트에 입력하는 시뮬레이션 상태 시간임 ex) t = 30 -> 30초가 지난 상태의 시뮬레이션 형태 도출
     }
 
     public class SmpMat : Material
@@ -38,18 +41,17 @@ namespace Morpho4D.Models
         public double glassyModulus { get; set; }
         public double rubberyModulus { get; set; }
         public double steepness { get; set; }
-        private double defaultYoungsModulus;
-        public override double youngsModulus
-        {
-            get => defaultYoungsModulus;
-            set => defaultYoungsModulus = value;
-        }
 
-        /*Sigmoid 함수 구현(컴포넌트 분리 필요)*/
-        public double updateSmpYoungsModulus(double currentTemp)
+        /*Sigmoid 함수 구현*/
+        public double calculateSigmoid(double temp)
         {
-            double exponent = steepness * (currentTemp - glassTransTemp);
+            double exponent = steepness * (temp - glassTransTemp);
             return rubberyModulus + (glassyModulus - rubberyModulus) / (1 + Math.Exp(exponent));
+        }
+        public override void evaluateState(VoxelCell voxel, double t, double currentTemp)
+        {
+            voxel.currentYoungsModulus = calculateSigmoid(currentTemp);
+            voxel.expansionForce = 0;
         }
 
         /*생성자*/
@@ -65,7 +67,7 @@ namespace Morpho4D.Models
                 this.glassyModulus = sigmoidModel.Eg;
                 this.rubberyModulus = sigmoidModel.Er;
                 this.steepness = sigmoidModel.k;
-                this.defaultYoungsModulus = updateSmpYoungsModulus(25.0); // 상온 기준으로 한번 업데이트 해줌
+                this.youngsModulus = calculateSigmoid(25.0); // 상온 기준으로 한번 업데이트 해줌
             }
 
         }
@@ -97,12 +99,33 @@ namespace Morpho4D.Models
         public double maxHydration { get; set; } // 가질 수 있는 최대 농도
         public double saturationLimit { get; set; } // 표면 농도
 
-        /*Fick의 확산법칙 구현(컴포넌트 분리 필요)*/
-        public double updateHydrationLevel(double gradient, double deltaTime)
+        /*Fick의 확산법칙 구현*/
+        public double calculateAnalyticalDiffusion(double distance, double time, double D, double Cs)
         {
-            return this.diffusionCoefficient * gradient * deltaTime;
-            // gradient, deletaTime 변수는 나중에 Solver 컴포넌트 인풋에서 입력함
-            // 나중에 Solver 컴포넌트에서 (함수의 반환값 * 삼투압) = (재료가 실제 팽창하는 힘) 이렇게 계산됨
+            if (time <= 0) { return 0; }
+            if (distance <= 0) { return 0; }
+            
+
+            double argument = distance / (2.0 * Math.Sqrt(D * time));
+            double hydration = Cs * Erfc(argument);
+
+            return Math.Min(hydration, maxHydration);
+        }
+        private double Erfc(double x) // 오차 함수
+        {
+            double t = 1.0 / (1.0 + 0.5 * Math.Abs(x));
+            double ans = t * Math.Exp(-x * x - 1.26551223 + t * (1.00002368 + t * (0.37409196 +
+                        t * (0.09678418 + t * (-0.18628806 + t * (0.27886807 +
+                        t * (-1.13520398 + t * (1.48851587 + t * (-0.82215223 +
+                        t * 0.17087277)))))))));
+
+            return x >= 0 ? ans : 2.0 - ans;
+        }
+        public override void evaluateState(VoxelCell voxel, double t, double currentTemp)
+        {
+            double hydration = calculateAnalyticalDiffusion(voxel.distanceFromSurface, t, this.diffusionCoefficient, this.saturationLimit);
+            voxel.currentHydration = hydration;
+            voxel.expansionForce = hydration * this.osmoticPressure;
         }
 
         /*생성자*/

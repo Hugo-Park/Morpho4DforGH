@@ -8,14 +8,31 @@ namespace Morpho4D.Models
 {
     public class VoxelCell
     {
+        /*고유 정보 및 위치*/
         public int Id { get; set; } // 고유 ID
         public Point3d initialPoint { get; set; } // 초기 위치
+        public Point3d currentPoint {get; set;} // Solver가 실시간으로 이동시킬 좌표
+        public Material assignedMaterial { get; set; } // 적용된 재료
         public Vector3d expectedMove { get; set; } // 예상 변형 (벡터)
+        
+        /*전처리 데이터*/   
+        public double distanceFromSurface { get; set; } // 표면으로부터의 최단 거리
+        public double volume { get; set; } // 복셀의 부피
+
+        /*실시간 물리적 상태*/
+        public double currentTemp { get; set; } = 25.0; // 초기 온도 (Smp 전용)
+        public double currentHydration { get; set; } = 0.0; // 초기 흡수율 (Hydrogel 전용)
+
+        /*업데이트 될 물성 변수(L-BGFS Solver에 전달될 값)*/
+        public double currentYoungsModulus { get; set; } // 현재 강성
+        public double expansionForce { get; set; } // Fick + Osmotic = Hydrogel의 실제 팽창력
+        public double currentPoissonRatio { get; set; } // 현재 포아송 비
+
         public VoxelCell(int id, Point3d position)
         {
             this.Id = id;
             this.initialPoint = position;
-            this.expectedMove = new Vector3d(0, 0, 0);
+            this.currentPoint = position;
         }
     }
 
@@ -87,7 +104,7 @@ namespace Morpho4D.Models
     /// VoxelCell 데이터를 Grasshopper로 전송하기 위한 일종의 포장지 class
     /// IGH_Goo를 사용하여 커스텀 데이터를 효율적으로 사용 가능
     /// </summary>
-    
+
     public class VoxelCellGoo : GH_Goo<VoxelCell>
     {
         public VoxelCellGoo() { }
