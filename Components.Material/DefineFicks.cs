@@ -26,7 +26,7 @@ namespace _Morpho4D
 
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
-            pManager.AddGenericParameter("Fick's Model", "Fm", "Settings for Fick's law of diffusion", GH_ParamAccess.item);
+            pManager.AddGenericParameter("Fick's Model", "FM", "Settings for Fick's law of diffusion", GH_ParamAccess.item);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)

@@ -11,24 +11,50 @@ namespace Morpho4D.Models
     public abstract class Material
     {
         /*기본 정보*/
-        public string materialName { get; set; } // 재료 이름
-        public Color previewColor { get; set; } // preview 색상
-
-        /*재료 공통 속성*/
-        public double youngsModulus { get; set; } // 재료의 강성
-        public double poissonRatio { get; set; } // 포아송 비
-        public Material(string name, Color color, double youngsMod, double poisson)
+        public struct MaterialBase
         {
-            this.materialName = name;
-            this.previewColor = color;
-            this.youngsModulus = youngsMod;
-            this.poissonRatio = poisson;
+            public string materialName { get; set; } // 재료 이름
+            public Color previewColor { get; set; } // preview 색상
+
+            /*재료 공통 속성*/
+            public double youngsModulus { get; set; } // 재료의 강성
+            public double poissonRatio { get; set; } // 포아송 비
+            public MaterialBase(string name, Color color, double youngsMod, double poisson)
+            {
+                materialName = name;
+                previewColor = color;
+                youngsModulus = youngsMod;
+                poissonRatio = poisson;
+            }
+        }
+        protected MaterialBase materialBase;
+
+        public Material(MaterialBase materialBase)
+        {
+            this.materialBase = materialBase;
         }
 
-        /*추상 함수 선언: updateProperties()*/
+        /*추상 함수 선언: evaluateState()*/
         public abstract void evaluateState(VoxelCell voxel, double t, double currentTemp);
         // 변수 t는 solver 컴포넌트에 입력하는 시뮬레이션 상태 시간임 ex) t = 30 -> 30초가 지난 상태의 시뮬레이션 형태 도출
     }
+
+    /*
+    public class MaterialBase
+    {
+        public string matName;
+        public Color prevCol;
+        public double youngs;
+        public double poissonR;
+        public MaterialBase(string matName, Color prevCol, double youngs, double poissonR)
+        {
+            this.matName = matName;
+            this.prevCol = prevCol;
+            this.youngs = youngs;
+            this.poissonR = poissonR;
+        }
+    }
+    */
 
     public class SmpMat : Material
     {
@@ -55,8 +81,8 @@ namespace Morpho4D.Models
         }
 
         /*생성자*/
-        public SmpMat(string name, Color color, double youngsMod, double poisson, double minSwelling, double maxSwelling, SigmoidModel sigmoidModel)
-            : base(name, color, youngsMod, poisson)
+        public SmpMat(MaterialBase mBase, double minSwelling, double maxSwelling, SigmoidModel sigmoidModel)
+            : base(mBase)
         {
             this.maxSwellingRatio = maxSwelling;
             this.minSwellingRatio = minSwelling;
@@ -67,7 +93,7 @@ namespace Morpho4D.Models
                 this.glassyModulus = sigmoidModel.Eg;
                 this.rubberyModulus = sigmoidModel.Er;
                 this.steepness = sigmoidModel.k;
-                this.youngsModulus = calculateSigmoid(25.0); // 상온 기준으로 한번 업데이트 해줌
+                this.materialBase.youngsModulus = calculateSigmoid(25.0); // 상온 기준으로 한번 업데이트 해줌
             }
 
         }
@@ -104,7 +130,7 @@ namespace Morpho4D.Models
         {
             if (time <= 0) { return 0; }
             if (distance <= 0) { return 0; }
-            
+
 
             double argument = distance / (2.0 * Math.Sqrt(D * time));
             double hydration = Cs * Erfc(argument);
@@ -129,8 +155,8 @@ namespace Morpho4D.Models
         }
 
         /*생성자*/
-        public HydrogelMat(string name, Color color, double youngsMod, double poisson, double maxSwelling, double minSwelling, double osmoPressure, FicksModel diffusionModel)
-            : base(name, color, youngsMod, poisson)
+        public HydrogelMat(MaterialBase mBase, double maxSwelling, double minSwelling, double osmoPressure, FicksModel diffusionModel)
+            : base(mBase)
         {
             this.maxSwellingRatio = maxSwelling;
             this.minSwellingRatio = minSwelling;
