@@ -23,7 +23,6 @@ namespace _Morpho4D
             pManager.AddColourParameter("Preview Color", "PrvCol", "Preview color of the material", GH_ParamAccess.item, Color.Blue);
             pManager.AddNumberParameter("Young's Modulus", "Y's", "Young's modulus of the material", GH_ParamAccess.item, 1000.0);
             pManager.AddNumberParameter("Poisson's Ratio", "PR", "Poisson's ratio of the material", GH_ParamAccess.item, 0.4);
-
         }
 
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)

@@ -10,13 +10,11 @@ namespace Morpho4D.Models
 {
     public abstract class Material
     {
-        /*기본 정보*/
+        /*재료의 기본 정보 변수들을 MaterialBase 구조체로 묶음*/
         public struct MaterialBase
         {
             public string materialName { get; set; } // 재료 이름
             public Color previewColor { get; set; } // preview 색상
-
-            /*재료 공통 속성*/
             public double youngsModulus { get; set; } // 재료의 강성
             public double poissonRatio { get; set; } // 포아송 비
             public MaterialBase(string name, Color color, double youngsMod, double poisson)
@@ -28,7 +26,6 @@ namespace Morpho4D.Models
             }
         }
         protected MaterialBase materialBase;
-
         public Material(MaterialBase materialBase)
         {
             this.materialBase = materialBase;
@@ -39,26 +36,8 @@ namespace Morpho4D.Models
         // 변수 t는 solver 컴포넌트에 입력하는 시뮬레이션 상태 시간임 ex) t = 30 -> 30초가 지난 상태의 시뮬레이션 형태 도출
     }
 
-    /*
-    public class MaterialBase
-    {
-        public string matName;
-        public Color prevCol;
-        public double youngs;
-        public double poissonR;
-        public MaterialBase(string matName, Color prevCol, double youngs, double poissonR)
-        {
-            this.matName = matName;
-            this.prevCol = prevCol;
-            this.youngs = youngs;
-            this.poissonR = poissonR;
-        }
-    }
-    */
-
     public class SmpMat : Material
     {
-
         public double glassTransTemp { get; set; } // 유리전이온도
         public double maxSwellingRatio { get; set; } // 최대 열팽창률
         public double minSwellingRatio { get; set; } // 최소 열팽창률

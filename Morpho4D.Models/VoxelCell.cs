@@ -104,7 +104,6 @@ namespace Morpho4D.Models
     /// VoxelCell 데이터를 Grasshopper로 전송하기 위한 일종의 포장지 class
     /// IGH_Goo를 사용하여 커스텀 데이터를 효율적으로 사용 가능
     /// </summary>
-
     public class VoxelCellGoo : GH_Goo<VoxelCell>
     {
         public VoxelCellGoo() { }
