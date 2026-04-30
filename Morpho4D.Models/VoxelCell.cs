@@ -13,11 +13,12 @@ namespace Morpho4D.Models
         public Point3d initialPoint { get; set; } // 초기 위치
         public Point3d currentPoint {get; set;} // Solver가 실시간으로 이동시킬 좌표
         public Material assignedMaterial { get; set; } // 적용된 재료
-        public Vector3d expectedMove { get; set; } // 예상 변형 (벡터)
-        
+
         /*전처리 데이터*/   
         public double distanceFromSurface { get; set; } // 표면으로부터의 최단 거리
         public double volume { get; set; } // 복셀의 부피
+        public List<int> neighborIndices { get; set; } = new List<int>(); // 인접 복셀의 ID 정보
+        public bool isFixed { get; set; } = false; // 고정되어야 하는 복셀인가
 
         /*실시간 물리적 상태*/
         public double currentTemp { get; set; } = 25.0; // 초기 온도 (Smp 전용)
@@ -27,6 +28,9 @@ namespace Morpho4D.Models
         public double currentYoungsModulus { get; set; } // 현재 강성
         public double expansionForce { get; set; } // Fick + Osmotic = Hydrogel의 실제 팽창력
         public double currentPoissonRatio { get; set; } // 현재 포아송 비
+
+        /*Solver 연산용 데이터*/
+        public Vector3d gradient { get; set; }
 
         public VoxelCell(int id, Point3d position)
         {
