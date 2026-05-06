@@ -3,6 +3,9 @@ using Rhino.Geometry;
 using System.Linq;
 using System;
 using Grasshopper.Kernel.Types;
+using Grasshopper.Kernel;
+using System.Drawing;
+using Rhino.Display;
 
 namespace Morpho4D.Models
 {
@@ -101,6 +104,11 @@ namespace Morpho4D.Models
             }
 
             return result;
+        }
+
+        public static void drawPreviewMesh(IGH_PreviewArgs args, Mesh mesh, DisplayMaterial prevColor)
+        {
+            args.Display.DrawMeshShaded(mesh, prevColor);
         }
     }
 

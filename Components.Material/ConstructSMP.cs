@@ -28,7 +28,7 @@ namespace _Morpho4D
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
             pManager.AddGenericParameter("SMP", "SMP", "Constructed SMP material", GH_ParamAccess.item);
-            pManager.AddTextParameter("Status", "stat", "Current Status of Material", GH_ParamAccess.list);
+            pManager.AddTextParameter("Inspection", "?", "Inspection of SMP", GH_ParamAccess.list);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)

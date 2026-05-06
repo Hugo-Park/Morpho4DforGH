@@ -4,13 +4,15 @@ using Morpho4D.Models;
 using Grasshopper;
 using Grasshopper.Kernel;
 using Rhino.Geometry;
+using Grasshopper.GUI.SettingsControls;
+using Rhino.Display;
 
 namespace _Morpho4D
 {
     public class ShowVoxels : GH_Component
     {
         public ShowVoxels()
-          : base("Show Voxels", "SV",
+          : base("Show Voxels", "sVX",
             "Show converted Voxels",
             "Morpho4D", "Voxel")
         {
@@ -28,6 +30,8 @@ namespace _Morpho4D
             pManager.AddPointParameter("Point", "P", "Output Voxels(Point)", GH_ParamAccess.list); // Voxel의 중심점
         }
 
+        private Mesh visualMesh;
+        private DisplayMaterial prevColor;
         protected override void SolveInstance(IGH_DataAccess DA)
         {
             List<VoxelCellGoo> goos = new List<VoxelCellGoo>();
@@ -48,11 +52,24 @@ namespace _Morpho4D
                 }
             }
 
-            Mesh visualMesh = Morpho4D.Models.Voxelizer.showVoxels(voxelList, size);
+            visualMesh = Morpho4D.Models.Voxelizer.showVoxels(voxelList, size);
+
+            if (voxelList.Count > 0 && voxelList[0].assignedMaterial != null)
+            {
+                prevColor = new DisplayMaterial(voxelList[0].assignedMaterial.getPreviewColor());
+            }
 
             DA.SetData(0, visualMesh);
             DA.SetDataList(1, voxelPoint);
+        }
 
+        /// <summary>
+        /// GH_Component 클래스 함수 override
+        /// </summary>
+        /// <param name="args"></param>
+        public override void DrawViewportMeshes(IGH_PreviewArgs args)
+        {
+            Voxelizer.drawPreviewMesh(args, visualMesh, prevColor);
         }
 
         protected override System.Drawing.Bitmap Icon => null;

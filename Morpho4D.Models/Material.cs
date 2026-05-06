@@ -31,9 +31,22 @@ namespace Morpho4D.Models
             this.materialBase = materialBase;
         }
 
-        /*추상 함수 선언: evaluateState()*/
+        /// <summary>
+        /// 추상함수 선언 -> Material이 가진 속성 중 하나를 업데이트 함.
+        /// </summary>
+        /// <param name="voxel"></param>
+        /// <param name="t">solver 컴포넌트에 입력하는 시뮬레이션 상태 시간 ex) t = 30 -> 30초가 지난 상태의 시뮬레이션 형태 도출</param>
+        /// <param name="currentTemp">현재 온도</param>
         public abstract void evaluateState(VoxelCell voxel, double t, double currentTemp);
-        // 변수 t는 solver 컴포넌트에 입력하는 시뮬레이션 상태 시간임 ex) t = 30 -> 30초가 지난 상태의 시뮬레이션 형태 도출
+
+        public string getMaterialName()
+        {
+            return this.materialBase.materialName;
+        }
+        public Color getPreviewColor()
+        {
+            return this.materialBase.previewColor;
+        }
     }
 
     public class SmpMat : Material
