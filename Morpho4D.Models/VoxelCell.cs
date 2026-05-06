@@ -106,10 +106,6 @@ namespace Morpho4D.Models
             return result;
         }
 
-        public static void drawPreviewMesh(IGH_PreviewArgs args, Mesh mesh, DisplayMaterial prevColor)
-        {
-            args.Display.DrawMeshShaded(mesh, prevColor);
-        }
     }
 
     /// <summary>

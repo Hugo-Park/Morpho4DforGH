@@ -7,6 +7,7 @@ using Rhino.Geometry;
 
 using Morpho4D.Models;
 using Rhino.Commands;
+using Rhino.Display;
 
 namespace _Morpho4D
 {
@@ -29,14 +30,14 @@ namespace _Morpho4D
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
             pManager.AddGenericParameter("Voxels", "VX", "Output Voxels", GH_ParamAccess.list);
-            pManager.AddIntegerParameter("Count", "N", "Number of Voxels", GH_ParamAccess.item);
             pManager.AddTextParameter("Inspection", "?", "Inspection of Voxels", GH_ParamAccess.list);
         }
 
+        private Brep inputBrep = null;
+        private DisplayMaterial prevColor = null;
+        Material assignedMat = null;
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            Brep inputBrep = null;
-            Material assignedMat = null;
             double voxelSize = 1.0;
 
             if (!DA.GetData(0, ref inputBrep)) { return; }
@@ -61,11 +62,21 @@ namespace _Morpho4D
             statList.Add(string.Format("Assigned Material: {0}", assignedMat.getMaterialName()));
             statList.Add(string.Format("Voxel Count: {0}", count));
 
+            prevColor = new DisplayMaterial(assignedMat.getPreviewColor());
+
             DA.SetDataList(0, goos);
-            DA.SetData(1, count);
-            DA.SetDataList(2, statList);
+            DA.SetDataList(1, statList);
         }
 
+        public override void DrawViewportMeshes(IGH_PreviewArgs args)
+        {
+            args.Display.DrawBrepShaded(inputBrep, prevColor);
+        }
+
+        public override void DrawViewportWires(IGH_PreviewArgs args)
+        {
+            args.Display.DrawBrepWires(inputBrep, assignedMat.getPreviewColor(), -1);
+        }
         protected override System.Drawing.Bitmap Icon => null;
 
         public override Guid ComponentGuid => new Guid("01df7804-29cd-4520-98df-a2d2e6835585");

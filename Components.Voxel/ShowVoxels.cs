@@ -69,7 +69,7 @@ namespace _Morpho4D
         /// <param name="args"></param>
         public override void DrawViewportMeshes(IGH_PreviewArgs args)
         {
-            Voxelizer.drawPreviewMesh(args, visualMesh, prevColor);
+            args.Display.DrawMeshShaded(visualMesh, prevColor);
         }
 
         protected override System.Drawing.Bitmap Icon => null;
