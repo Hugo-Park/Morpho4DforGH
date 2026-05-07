@@ -22,9 +22,9 @@ namespace _Morpho4D
 
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
-            pManager.AddBrepParameter("Brep", "B", "Input Brep", GH_ParamAccess.item);
+            pManager.AddBrepParameter("Brep", "B", "Input Brep (Only One Brep Allowed)", GH_ParamAccess.list);
             pManager.AddNumberParameter("Size", "S", "Size of Voxel", GH_ParamAccess.item);
-            pManager.AddGenericParameter("Material", "M", "Material to Assign", GH_ParamAccess.item);
+            pManager.AddGenericParameter("Material", "M", "Material to Assign (Only One Material Allowed)", GH_ParamAccess.list);
         }
 
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
@@ -33,49 +33,79 @@ namespace _Morpho4D
             pManager.AddTextParameter("Inspection", "?", "Inspection of Voxels", GH_ParamAccess.list);
         }
 
-        private Brep inputBrep = null;
+        private Brep previewBrep = null;
+        private Material previewMat = null;
         private DisplayMaterial prevColor = null;
-        Material assignedMat = null;
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            double voxelSize = 1.0;
+            this.ClearRuntimeMessages();
 
-            if (!DA.GetData(0, ref inputBrep)) { return; }
+            double voxelSize = 0.0;
+            List<Brep> inputBrep = new List<Brep>();
+            List<Material> inputMat = new List<Material>();
+
+            if (!DA.GetDataList(0, inputBrep)) { return; }
             if (!DA.GetData(1, ref voxelSize)) { return; }
-            if (!DA.GetData(2, ref assignedMat)) { return; }
+            if (!DA.GetDataList(2, inputMat)) { return; }
 
-
-            List<VoxelCell> result = Morpho4D.Models.Voxelizer.createVoxels(inputBrep, voxelSize);
-
-            List<VoxelCellGoo> goos = new List<VoxelCellGoo>();
-
-            int count = 0;
-            foreach (VoxelCell v in result)
+            // Input Only One Brep Check
+            if(inputBrep.Count >= 2)
             {
-                v.assignedMaterial = assignedMat;
-                VoxelCellGoo package = new VoxelCellGoo(v);
-                goos.Add(package);
-                count++;
+                this.AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Input Only One Brep");
+                previewBrep = null;
+                return;
             }
 
-            List<string> statList = new List<string>();
-            statList.Add(string.Format("Assigned Material: {0}", assignedMat.getMaterialName()));
-            statList.Add(string.Format("Voxel Count: {0}", count));
+            // Input Only One Material Check
+            if(inputMat.Count >= 2)
+            {
+                this.AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Input Only One Material");
+                previewMat = null;
+                return ;
+            }
 
-            prevColor = new DisplayMaterial(assignedMat.getPreviewColor());
+            if(inputBrep.Count == 1 && inputMat.Count == 1)
+            {
+                previewBrep = inputBrep[0];
+                previewMat = inputMat[0];
 
-            DA.SetDataList(0, goos);
-            DA.SetDataList(1, statList);
+                List<VoxelCell> result = Morpho4D.Models.Voxelizer.createVoxels(inputBrep[0], voxelSize);
+                List<VoxelCellGoo> goos = new List<VoxelCellGoo>();
+
+                int count = 0;
+                foreach (VoxelCell v in result)
+                {
+                    v.assignedMaterial = inputMat[0];
+                    VoxelCellGoo package = new VoxelCellGoo(v);
+                    goos.Add(package);
+                    count++;
+                }
+
+                List<string> statList = new List<string>();
+                statList.Add(string.Format("Assigned Material: {0}", inputMat[0].getMaterialName()));
+                statList.Add(string.Format("Voxel Count: {0}", count));
+
+                prevColor = new DisplayMaterial(inputMat[0].getPreviewColor());
+
+                DA.SetDataList(0, goos);
+                DA.SetDataList(1, statList);
+            }            
         }
 
         public override void DrawViewportMeshes(IGH_PreviewArgs args)
         {
-            args.Display.DrawBrepShaded(inputBrep, prevColor);
+            if(previewBrep != null && prevColor != null)
+            {
+                args.Display.DrawBrepShaded(previewBrep, prevColor);
+            }
         }
 
         public override void DrawViewportWires(IGH_PreviewArgs args)
         {
-            args.Display.DrawBrepWires(inputBrep, assignedMat.getPreviewColor(), -1);
+            if(previewBrep != null && previewMat != null)
+            {
+                args.Display.DrawBrepWires(previewBrep, previewMat.getPreviewColor(), -1);
+            }
         }
         protected override System.Drawing.Bitmap Icon => null;
 

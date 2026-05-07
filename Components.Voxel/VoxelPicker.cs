@@ -26,6 +26,7 @@ namespace _Morpho4D
 
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
+            pManager.AddPointParameter("Point", "P", "Center Point of Selected Voxel", GH_ParamAccess.item);
             pManager.AddTextParameter("Inspection", "?", "Inspection of One Specific Voxel", GH_ParamAccess.list);
         }
 
@@ -39,11 +40,15 @@ namespace _Morpho4D
 
             List<String> statList = new List<String>();
             statList.Add(string.Format("Voxel ID: {0}", voxelID));
-            statList.Add(string.Format("Initial Point: {0:f3}", goos[voxelID].Value.initialPoint));
-            statList.Add(string.Format("Current Point: {0:f3}", goos[voxelID].Value.currentPoint));
-            // 이후 추가적으로 어떤 속성을 출력할지는 정해야 됨
+            statList.Add(string.Format("Initial Point: ({0:f3})", goos[voxelID].Value.initialPoint));
+            statList.Add(string.Format("Current Point: ({0:f3})", goos[voxelID].Value.currentPoint));
 
-            DA.SetDataList(0, statList);
+            // 이후 추가적으로 어떤 속성을 출력할지는 정해야 됨
+            
+            Point3d centerPoint = goos[voxelID].Value.currentPoint;
+
+            DA.SetData(0, centerPoint);
+            DA.SetDataList(1, statList);
         }
 
         protected override System.Drawing.Bitmap Icon => null;

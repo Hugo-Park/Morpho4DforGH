@@ -27,7 +27,7 @@ namespace _Morpho4D
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
             pManager.AddMeshParameter("Mesh", "M", "Ouput Voxels(Mesh)", GH_ParamAccess.item); // Mesh 객체 하나로 합쳐서 내보냄
-            pManager.AddPointParameter("Point", "P", "Output Voxels(Point)", GH_ParamAccess.list); // Voxel의 중심점
+            pManager.AddPointParameter("Points", "Ps", "Output Voxels(Point)", GH_ParamAccess.list); // Voxel의 중심점
         }
 
         private Mesh visualMesh;
@@ -36,7 +36,7 @@ namespace _Morpho4D
         {
             List<VoxelCellGoo> goos = new List<VoxelCellGoo>();
             List<Point3d> voxelPoint = new List<Point3d>();
-            double size = 1.0;
+            double size = 0.0;
 
             if (!DA.GetDataList(0, goos)) { return; }
             if (!DA.GetData(1, ref size)) { return; }
