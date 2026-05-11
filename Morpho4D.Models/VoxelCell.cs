@@ -6,6 +6,8 @@ using Grasshopper.Kernel.Types;
 using Grasshopper.Kernel;
 using System.Drawing;
 using Rhino.Display;
+using System.Collections.Concurrent;
+using System.Threading.Tasks;
 
 namespace Morpho4D.Models
 {
@@ -14,10 +16,10 @@ namespace Morpho4D.Models
         /*고유 정보 및 위치*/
         public int Id { get; set; } // 고유 ID
         public Point3d initialPoint { get; set; } // 초기 위치
-        public Point3d currentPoint {get; set;} // Solver가 실시간으로 이동시킬 좌표
+        public Point3d currentPoint { get; set; } // Solver가 실시간으로 이동시킬 좌표
         public Material assignedMaterial { get; set; } // 적용된 재료
 
-        /*전처리 데이터*/   
+        /*전처리 데이터*/
         public double distanceFromSurface { get; set; } // 표면으로부터의 최단 거리
         public double volume { get; set; } // 복셀의 부피
         public List<int> neighborIndices { get; set; } = new List<int>(); // 인접 복셀의 ID 정보
@@ -55,6 +57,8 @@ namespace Morpho4D.Models
         /// <returns>List&lt;VoxelCell&gt; result</returns>
         public static List<VoxelCell> createVoxels(Brep inputBrep, double size)
         {
+
+            /*
             List<VoxelCell> result = new List<VoxelCell>();
             BoundingBox bbox = inputBrep.GetBoundingBox(true);
             int curId = 0;
@@ -77,6 +81,42 @@ namespace Morpho4D.Models
             }
 
             return result;
+            */
+
+            /*병렬처리로 대체*/
+            ConcurrentBag<VoxelCell> resultBag = new ConcurrentBag<VoxelCell>();
+            BoundingBox bbox = inputBrep.GetBoundingBox(true);
+
+            List<Point3d> pointsToTest = new List<Point3d>();
+            for (double x = bbox.Min.X; x <= bbox.Max.X; x += size)
+            {
+                for (double y = bbox.Min.Y; y <= bbox.Max.Y; y += size)
+                {
+                    for (double z = bbox.Min.Z; z <= bbox.Max.Z; z += size)
+                    {
+                        pointsToTest.Add(new Point3d(x, y, z));
+                    }
+                }
+            }
+
+            Parallel.ForEach(pointsToTest, curPoint =>
+            {
+                if (inputBrep.IsPointInside(curPoint, 0.01, true))
+                {
+                    resultBag.Add(new VoxelCell(0, curPoint));
+                }
+            });
+
+            List<VoxelCell> finalResult = resultBag.ToList();
+
+            finalResult = finalResult.OrderBy(v => v.initialPoint.X).ThenBy(v => v.initialPoint.Y).ThenBy(v => v.initialPoint.Z).ToList();
+
+            for (int i = 0; i < finalResult.Count; i++)
+            {
+                finalResult[i].Id = i;
+            }
+
+            return finalResult;
         }
 
         /// <summary>
