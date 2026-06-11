@@ -32,5 +32,9 @@ For a stable simulation, fix the center of volume of the Brep as an anchor point
 ![PipeLine](demo_images/05.png)<br>
 Result will be displayed as Mesh object and Point3D list but simulation speed and processing performance are dependent on your PC.
 
+## 06 It may seem like nothing has changed..<br>
+![It may seem like nothing has changed..](demo_images/06.png)<br>
+If there is a difference between the voel coordinates before and after the simulation, the simulation is successful.
+
 # What is L-BFGS?<br>
 Limited-memory BFGS (L-BFGS or LM-BFGS) is an optimization algorithm in the collection of quasi-Newton methods that approximates the Broyden–Fletcher–Goldfarb–Shanno algorithm (BFGS) using a limited amount of computer memory...To be updated<br>
