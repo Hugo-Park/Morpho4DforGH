@@ -8,6 +8,7 @@ using System.Drawing;
 using Rhino.Display;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
+using Morpho4D.Solver;
 
 namespace Morpho4D.Models
 {
@@ -21,8 +22,9 @@ namespace Morpho4D.Models
 
         /*전처리 데이터*/
         public double distanceFromSurface { get; set; } // 표면으로부터의 최단 거리
-        public double volume { get; set; } // 복셀의 부피
+        public double voxelSize { get; set; } // 복셀의 크기
         public List<int> neighborIndices { get; set; } = new List<int>(); // 인접 복셀의 ID 정보
+        public List<Hinge> hingeIndices { get; set; } = new List<Hinge>(); // 힌지 복셀의 정보
         public bool isFixed { get; set; } = false; // 고정되어야 하는 복셀인가
 
         /*실시간 물리적 상태*/
@@ -32,10 +34,12 @@ namespace Morpho4D.Models
         /*업데이트 될 물성 변수(L-BGFS Solver에 전달될 값)*/
         public double currentYoungsModulus { get; set; } // 현재 강성
         public double expansionForce { get; set; } // Fick + Osmotic = Hydrogel의 실제 팽창력
-        public double currentPoissonRatio { get; set; } // 현재 포아송 비
 
         /*Solver 연산용 데이터*/
         public Vector3d gradient { get; set; }
+
+        /*외부 하중 (LoadApplicator 유틸리티가 주입) - 기본값 0, 솔버 포텐셜 에너지에 E_ext = -F·x 로 반영됨*/
+        public Vector3d appliedLoad { get; set; } = Vector3d.Zero;
 
         public VoxelCell(int id, Point3d position)
         {
@@ -52,12 +56,34 @@ namespace Morpho4D.Models
         /// BoundingBox 생성 후 정한 size 만큼의 간격을 건너뛰며 점을 생성
         /// -> 3중 루프를 돌며 IsPointInside 로 Brep 내의 점인지 확인 -> 맞으면 VoxelCell 객체 생성
         /// </summary>
-        /// <param name="inpuBrep">입력 Brep</param>
+        /// <param name="inputBrep">입력 Brep</param>
         /// <param name="size">복셀의 크기 (클수록 점의 개수 줄어듦)</param>
         /// <returns>List&lt;VoxelCell&gt; result</returns>
         public static List<VoxelCell> createVoxels(Brep inputBrep, double size)
         {
+            MeshingParameters mParams = MeshingParameters.Default;
+            mParams.MaximumEdgeLength = size;
+            mParams.MinimumEdgeLength = size * 0.5;
+            mParams.GridAspectRatio = 1.0;
 
+            Mesh[] meshes = Mesh.CreateFromBrep(inputBrep, mParams);
+            if (meshes == null || meshes.Length == 0) return new List<VoxelCell>();
+            
+            Mesh combinedMesh = new Mesh();
+            foreach (Mesh m in meshes) combinedMesh.Append(m);
+
+            List<VoxelCell> result = new List<VoxelCell>();
+
+            for (int i = 0; i < combinedMesh.Vertices.Count; i++)
+            {
+                Point3d voxelPos = new Point3d(combinedMesh.Vertices[i]);
+                VoxelCell newCell = new VoxelCell(i, voxelPos);
+                newCell.voxelSize = size;
+                result.Add(newCell);
+            }
+
+            return result;
+            
             /*
             List<VoxelCell> result = new List<VoxelCell>();
             BoundingBox bbox = inputBrep.GetBoundingBox(true);
@@ -84,6 +110,7 @@ namespace Morpho4D.Models
             */
 
             /*병렬처리로 대체*/
+            /*
             ConcurrentBag<VoxelCell> resultBag = new ConcurrentBag<VoxelCell>();
             BoundingBox bbox = inputBrep.GetBoundingBox(true);
 
@@ -117,6 +144,7 @@ namespace Morpho4D.Models
             }
 
             return finalResult;
+            */
         }
 
         /// <summary>

@@ -5,6 +5,7 @@ using System;
 using Grasshopper.Kernel.Types;
 using System.Drawing;
 using Morpho4D.Models;
+using Morpho4D.Solver;
 
 namespace Morpho4D.Models
 {
@@ -35,9 +36,9 @@ namespace Morpho4D.Models
         /// 추상함수 선언 -> Material이 가진 속성 중 하나를 업데이트 함.
         /// </summary>
         /// <param name="voxel"></param>
+        /// <param name="stimulus">현재 자극 종류</param>
         /// <param name="t">solver 컴포넌트에 입력하는 시뮬레이션 상태 시간 ex) t = 30 -> 30초가 지난 상태의 시뮬레이션 형태 도출</param>
-        /// <param name="currentTemp">현재 온도</param>
-        public abstract void evaluateState(VoxelCell voxel, double t, double currentTemp);
+        public abstract void evaluateState(MorphoSolver solver, VoxelCell voxel, Stimulus stimulus, double t);
 
         public string getMaterialName()
         {
@@ -52,8 +53,8 @@ namespace Morpho4D.Models
     public class SmpMat : Material
     {
         public double glassTransTemp { get; set; } // 유리전이온도
-        public double maxSwellingRatio { get; set; } // 최대 열팽창률
-        public double minSwellingRatio { get; set; } // 최소 열팽창률
+        public double maxSwellingRatio { get; set; } // 최대 열팽창률 -> smp에 불필요
+        public double minSwellingRatio { get; set; } // 최소 열팽창률 -> smp에 불필요
 
         /*Sigmoid 함수 구현 변수*/
         public double glassyModulus { get; set; }
@@ -66,10 +67,28 @@ namespace Morpho4D.Models
             double exponent = steepness * (temp - glassTransTemp);
             return rubberyModulus + (glassyModulus - rubberyModulus) / (1 + Math.Exp(exponent));
         }
-        public override void evaluateState(VoxelCell voxel, double t, double currentTemp)
+        public override void evaluateState(MorphoSolver solver, VoxelCell voxel, Stimulus stimulus, double t)
         {
-            voxel.currentYoungsModulus = calculateSigmoid(currentTemp);
-            voxel.expansionForce = 0;
+            double temp = stimulus.TemperatureAt(voxel); // 공간 자극 필드 지원 (없으면 scalar temperature)
+            voxel.currentTemp = temp;
+            voxel.currentYoungsModulus = calculateSigmoid(temp);
+            voxel.expansionForce = 1;
+
+            /*타깃 곡률 로직*/
+            if (temp >= this.glassTransTemp) // 유리전이온도보다 낮으면 고정
+            {
+                voxel.currentYoungsModulus = 0.01;
+                foreach (Hinge h in voxel.hingeIndices)
+                {
+                    h.targetAngle = solver.calculateHingeAngle(h);
+                }
+            }
+
+            else
+            {
+                // 유리전이온도 미만이므로 형상 고정 상태
+                // (empty)
+            }       
         }
 
         /*생성자*/
@@ -121,8 +140,8 @@ namespace Morpho4D.Models
         public double calculateAnalyticalDiffusion(double distance, double time, double D, double Cs)
         {
             if (time <= 0) { return 0; }
-            if (distance <= 0) { return 0; }
-
+            if (distance < 0) { return 0; }
+            if (distance == 0) { return Cs; }
 
             double argument = distance / (2.0 * Math.Sqrt(D * time));
             double hydration = Cs * Erfc(argument);
@@ -139,11 +158,20 @@ namespace Morpho4D.Models
 
             return x >= 0 ? ans : 2.0 - ans;
         }
-        public override void evaluateState(VoxelCell voxel, double t, double currentTemp)
+        public override void evaluateState(MorphoSolver solver, VoxelCell voxel, Stimulus stimulus, double t)
         {
-            double hydration = calculateAnalyticalDiffusion(voxel.distanceFromSurface, t, this.diffusionCoefficient, this.saturationLimit);
+            voxel.currentTemp = 25.0;
+
+            double x = (voxel.distanceFromSurface <= 0) ? (voxel.voxelSize * 0.5) : voxel.distanceFromSurface;
+            double hydration = calculateAnalyticalDiffusion(x, t, this.diffusionCoefficient, this.saturationLimit);
             voxel.currentHydration = hydration;
-            voxel.expansionForce = hydration * this.osmoticPressure;
+            voxel.expansionForce = 1.0 + (hydration * (this.maxSwellingRatio - 1.0));
+            voxel.currentYoungsModulus = this.materialBase.youngsModulus;
+
+            foreach(Hinge h in voxel.hingeIndices)
+            {
+                h.targetAngle = Math.PI; // Hydrogel은 복셀간 거리 변화만 존재, 곡률 변화 없음
+            }
         }
 
         /*생성자*/
