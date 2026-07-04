@@ -10,8 +10,8 @@ using Grasshopper.Kernel;
 namespace _Morpho4D
 {
     /// <summary>
-    /// 연속 이미지 파일을 수집해 GIF 애니메이션을 생성하거나 파일 목록을 정리한다.
-    /// ViewportRecorder와 연결해 논문 figure 생산에 사용.
+    /// Collects sequential image files to generate a GIF animation or organize a file list.
+    /// Used to produce paper figures in connection with ViewportRecorder.
     /// </summary>
 #if NET5_0_OR_GREATER
     [SupportedOSPlatform("windows")]
@@ -20,24 +20,24 @@ namespace _Morpho4D
     {
         public MediaExporterComponent()
           : base("Media Exporter", "Media",
-              "ViewportRecorder 이미지를 수집해 GIF 또는 파일 목록으로 내보낸다. 논문 figure 생산용.",
-              "Morpho4D", "Utility")
+              "Collects ViewportRecorder images and exports them as a GIF or file list. For producing paper figures.",
+              "Morpho4D", "08 Utility")
         {
         }
 
         protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
-            pManager.AddTextParameter("Frame Paths", "F", "각 프레임 이미지 파일 경로 리스트", GH_ParamAccess.list);
-            pManager.AddTextParameter("Output Path", "Out", "저장할 GIF 파일 경로 (.gif)", GH_ParamAccess.item, "");
-            pManager.AddIntegerParameter("Frame Delay ms", "D", "프레임 간 지연 (ms)", GH_ParamAccess.item, 100);
-            pManager.AddBooleanParameter("Loop", "L", "GIF 무한 반복 여부", GH_ParamAccess.item, true);
-            pManager.AddBooleanParameter("Export", "E", "true로 설정하면 GIF 생성", GH_ParamAccess.item, false);
+            pManager.AddTextParameter("Frame Paths", "F", "List of each frame image file paths", GH_ParamAccess.list);
+            pManager.AddTextParameter("Output Path", "Out", "GIF file path to save (.gif)", GH_ParamAccess.item, "");
+            pManager.AddIntegerParameter("Frame Delay ms", "D", "Delay between frames (ms)", GH_ParamAccess.item, 100);
+            pManager.AddBooleanParameter("Loop", "L", "Whether to loop the GIF infinitely", GH_ParamAccess.item, true);
+            pManager.AddBooleanParameter("Export", "E", "If set to true, generates GIF", GH_ParamAccess.item, false);
         }
 
         protected override void RegisterOutputParams(GH_OutputParamManager pManager)
         {
-            pManager.AddTextParameter("Status", "S", "생성 결과", GH_ParamAccess.item);
-            pManager.AddIntegerParameter("Frame Count", "n", "처리된 프레임 수", GH_ParamAccess.item);
+            pManager.AddTextParameter("Status", "S", "Generation result", GH_ParamAccess.item);
+            pManager.AddIntegerParameter("Frame Count", "n", "Number of processed frames", GH_ParamAccess.item);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
@@ -55,15 +55,15 @@ namespace _Morpho4D
 
             if (!export)
             {
-                DA.SetData(0, string.Format("Export=false. {0}개 프레임 대기 중.", framePaths.Count));
+                DA.SetData(0, string.Format("Export=false. {0} frames waiting.", framePaths.Count));
                 DA.SetData(1, framePaths.Count);
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(outPath))
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "출력 경로를 지정하세요.");
-                DA.SetData(0, "ERROR: 경로 없음"); DA.SetData(1, 0);
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Please specify an output path.");
+                DA.SetData(0, "ERROR: No path"); DA.SetData(1, 0);
                 return;
             }
 
@@ -84,23 +84,23 @@ namespace _Morpho4D
                     }
                     encoder.Finish();
                 }
-                DA.SetData(0, string.Format("GIF 저장 완료: {0} ({1}프레임)", outPath, processed));
+                DA.SetData(0, string.Format("GIF saved: {0} ({1} frames)", outPath, processed));
             }
             catch (Exception ex)
             {
                 AddRuntimeMessage(GH_RuntimeMessageLevel.Warning,
-                    "GIF 생성 실패: " + ex.Message + ". 프레임 경로 목록만 출력합니다.");
-                DA.SetData(0, "경고: " + ex.Message);
+                    "Failed to generate GIF: " + ex.Message + ". Outputting only the frame path list.");
+                DA.SetData(0, "Warning: " + ex.Message);
             }
 
             DA.SetData(1, processed);
         }
 
         protected override Bitmap Icon => null;
-        public override Guid ComponentGuid => new Guid("AAAAAAA7-1111-2222-3333-444444444444");
+        public override Guid ComponentGuid => new Guid("e56fbad5-5081-4794-8732-8ccf53ed562a");
     }
 
-    // 최소 GIF 인코더 (순수 .NET — 외부 의존성 없음)
+    // Minimal GIF encoder (Pure .NET — no external dependencies)
 #if NET5_0_OR_GREATER
     [SupportedOSPlatform("windows")]
 #endif

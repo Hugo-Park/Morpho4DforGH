@@ -16,7 +16,7 @@ namespace _Morpho4D
         public BrepToVoxel()
           : base("Brep to Voxel", "B/V",
             "Convert Brep objects to Voxels",
-            "Morpho4D", "Voxel")
+            "Morpho4D", "01 Voxel")
         {
         }
 

@@ -9,34 +9,34 @@ using Rhino.Geometry;
 namespace _Morpho4D
 {
     /// <summary>
-    /// Bambu Lab X2D 이중 압출 G-code를 생성한다.
-    /// 노즐 전환: M620 S{n}A → T{n} → M621 S{n}A (Bambu 독점 시퀀스)
+    /// Generates Bambu Lab X2D dual extrusion G-code.
+    /// Nozzle switch: M620 S{n}A → T{n} → M621 S{n}A (Bambu proprietary sequence)
     /// </summary>
     public class GCodeExporterComponent : GH_Component
     {
         public GCodeExporterComponent()
           : base("GCode Exporter", "GCode",
-              "Bilayer 프린팅 경로를 X2D G-code로 변환·저장한다. Bambu Lab X2D 전용 노즐 전환 시퀀스 포함.",
-              "Morpho4D", "Fabrication")
+              "Converts and saves the Bilayer printing path to X2D G-code. Includes Bambu Lab X2D dedicated nozzle switch sequence.",
+              "Morpho4D", "07 Fabrication")
         {
         }
 
         protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
-            pManager.AddCurveParameter("T0 Paths", "P0", "passive(PLA) 압출 경로", GH_ParamAccess.list);
-            pManager.AddCurveParameter("T1 Paths", "P1", "active(SMP) 압출 경로", GH_ParamAccess.list);
-            pManager.AddNumberParameter("Layer Height", "LH", "레이어 높이 (mm)", GH_ParamAccess.item, 0.2);
-            pManager.AddNumberParameter("Line Width", "LW", "압출선 폭 (mm)", GH_ParamAccess.item, 0.4);
-            pManager.AddNumberParameter("Print Speed", "PS", "인쇄 속도 (mm/min)", GH_ParamAccess.item, 2400.0);
-            pManager.AddNumberParameter("Filament Diameter", "FD", "필라멘트 직경 (mm)", GH_ParamAccess.item, 1.75);
-            pManager.AddTextParameter("Output Path", "Out", "저장할 .gcode 파일 경로", GH_ParamAccess.item, "");
-            pManager.AddBooleanParameter("Export", "E", "true로 설정하면 파일 저장", GH_ParamAccess.item, false);
+            pManager.AddCurveParameter("T0 Paths", "P0", "passive(PLA) extrusion path", GH_ParamAccess.list);
+            pManager.AddCurveParameter("T1 Paths", "P1", "active(SMP) extrusion path", GH_ParamAccess.list);
+            pManager.AddNumberParameter("Layer Height", "LH", "Layer height (mm)", GH_ParamAccess.item, 0.2);
+            pManager.AddNumberParameter("Line Width", "LW", "Line width (mm)", GH_ParamAccess.item, 0.4);
+            pManager.AddNumberParameter("Print Speed", "PS", "Print speed (mm/min)", GH_ParamAccess.item, 2400.0);
+            pManager.AddNumberParameter("Filament Diameter", "FD", "Filament diameter (mm)", GH_ParamAccess.item, 1.75);
+            pManager.AddTextParameter("Output Path", "Out", ".gcode file path to save", GH_ParamAccess.item, "");
+            pManager.AddBooleanParameter("Export", "E", "Save file if set to true", GH_ParamAccess.item, false);
         }
 
         protected override void RegisterOutputParams(GH_OutputParamManager pManager)
         {
-            pManager.AddTextParameter("GCode Preview", "G", "생성된 G-code 미리보기 (첫 100줄)", GH_ParamAccess.list);
-            pManager.AddTextParameter("Status", "S", "저장 상태", GH_ParamAccess.item);
+            pManager.AddTextParameter("GCode Preview", "G", "Generated G-code preview (first 100 lines)", GH_ParamAccess.list);
+            pManager.AddTextParameter("Status", "S", "Save status", GH_ParamAccess.item);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
@@ -62,17 +62,17 @@ namespace _Morpho4D
             for (int i = 0; i < Math.Min(100, lines.Count); i++)
                 preview.Add(lines[i]);
 
-            string status = "미저장 (Export=false)";
+            string status = "Not saved (Export=false)";
             if (export && !string.IsNullOrWhiteSpace(outPath))
             {
                 try
                 {
                     File.WriteAllLines(outPath, lines);
-                    status = $"저장 완료: {outPath} ({lines.Count}줄)";
+                    status = $"Save complete: {outPath} ({lines.Count} lines)";
                 }
                 catch (Exception ex)
                 {
-                    status = $"저장 실패: {ex.Message}";
+                    status = $"Save failed: {ex.Message}";
                     AddRuntimeMessage(GH_RuntimeMessageLevel.Error, status);
                 }
             }
@@ -89,27 +89,27 @@ namespace _Morpho4D
             double ePerMm = (lh * lw) / (Math.PI * (fd / 2.0) * (fd / 2.0));
             double eAcc = 0.0;
 
-            // 헤더 — 경고 4개 필수 포함
+            // Header — must include 4 warnings
             g.Add("; === Morph4D v4.1 G-code ===");
-            g.Add("; WARNING: 이 파일은 Bambu Lab X2D 독점 펌웨어 명령을 포함합니다.");
-            g.Add("; WARNING: Bambu Studio로 import하여 검토 후 출력하십시오 (직접 전송 비권장).");
-            g.Add("; WARNING: T0 = passive(PLA), T1 = active(SMP). 슬라이서의 필라멘트 매핑을 확인하십시오.");
-            g.Add("; WARNING: Cool Mode(챔버 냉각)를 비활성화하면 SMP 활성화 온도에 영향을 줄 수 있습니다.");
+            g.Add("; WARNING: This file contains Bambu Lab X2D proprietary firmware commands.");
+            g.Add("; WARNING: Import into Bambu Studio to review before printing (direct sending not recommended).");
+            g.Add("; WARNING: T0 = passive(PLA), T1 = active(SMP). Check filament mapping in the slicer.");
+            g.Add("; WARNING: Disabling Cool Mode (chamber cooling) may affect SMP activation temperature.");
             g.Add(";");
             g.Add($"; Layer Height: {lh} mm | Line Width: {lw} mm | Print Speed: {ps} mm/min");
             g.Add("");
-            g.Add("G21 ; mm 단위");
-            g.Add("G90 ; 절대 좌표");
-            g.Add("M82 ; 절대 압출");
-            g.Add("G28 ; 원점 복귀");
+            g.Add("G21 ; mm units");
+            g.Add("G90 ; Absolute coordinates");
+            g.Add("M82 ; Absolute extrusion");
+            g.Add("G28 ; Auto home");
             g.Add("");
 
-            // 스커트 2루프 (T0으로 시작)
-            g.Add("; --- 스커트 (2 루프) ---");
+            // Skirt 2 loops (Starts with T0)
+            g.Add("; --- Skirt (2 loops) ---");
             g.Add(SwitchNozzle(0));
             for (int loop = 0; loop < 2; loop++)
             {
-                g.Add($"G1 X5 Y{5 + loop * 2} F{(int)(ps * 2)} ; 스커트 이동");
+                g.Add($"G1 X5 Y{5 + loop * 2} F{(int)(ps * 2)} ; Skirt move");
                 g.Add($"G1 X80 Y{5 + loop * 2} E{eAcc + 5.0:F4} F{(int)ps}");
                 eAcc += 5.0;
             }
@@ -117,16 +117,16 @@ namespace _Morpho4D
 
             int currentNozzle = 0;
 
-            // T0 레이어
+            // T0 layer
             if (t0Paths.Count > 0)
             {
-                g.Add("; --- T0 (PLA passive) 레이어 ---");
+                g.Add("; --- T0 (PLA passive) layer ---");
                 if (currentNozzle != 0) { g.Add(SwitchNozzle(0)); currentNozzle = 0; }
                 foreach (var path in t0Paths)
                 {
                     var pts = SampleCurve(path, lw);
                     if (pts.Count < 2) continue;
-                    g.Add($"G0 X{pts[0].X:F3} Y{pts[0].Y:F3} Z{pts[0].Z:F3} F{(int)(ps * 3)} ; 이동");
+                    g.Add($"G0 X{pts[0].X:F3} Y{pts[0].Y:F3} Z{pts[0].Z:F3} F{(int)(ps * 3)} ; Move");
                     for (int i = 1; i < pts.Count; i++)
                     {
                         double seg = pts[i - 1].DistanceTo(pts[i]);
@@ -136,17 +136,17 @@ namespace _Morpho4D
                 }
             }
 
-            // T1 레이어
+            // T1 layer
             if (t1Paths.Count > 0)
             {
                 g.Add("");
-                g.Add("; --- T1 (SMP active) 레이어 ---");
+                g.Add("; --- T1 (SMP active) layer ---");
                 if (currentNozzle != 1) { g.Add(SwitchNozzle(1)); currentNozzle = 1; }
                 foreach (var path in t1Paths)
                 {
                     var pts = SampleCurve(path, lw);
                     if (pts.Count < 2) continue;
-                    g.Add($"G0 X{pts[0].X:F3} Y{pts[0].Y:F3} Z{pts[0].Z:F3} F{(int)(ps * 3)} ; 이동");
+                    g.Add($"G0 X{pts[0].X:F3} Y{pts[0].Y:F3} Z{pts[0].Z:F3} F{(int)(ps * 3)} ; Move");
                     for (int i = 1; i < pts.Count; i++)
                     {
                         double seg = pts[i - 1].DistanceTo(pts[i]);
@@ -156,19 +156,19 @@ namespace _Morpho4D
                 }
             }
 
-            // 푸터
+            // Footer
             g.Add("");
-            g.Add("; --- 종료 ---");
-            g.Add("G28 X Y ; X Y 원점");
-            g.Add("M84     ; 모터 비활성화");
-            g.Add("; === 종료 ===");
+            g.Add("; --- End ---");
+            g.Add("G28 X Y ; X Y Home");
+            g.Add("M84     ; Disable motors");
+            g.Add("; === End ===");
 
             return g;
         }
 
         private static string SwitchNozzle(int n)
         {
-            // Bambu Lab X2D 노즐 전환 시퀀스 (독점 펌웨어)
+            // Bambu Lab X2D nozzle switch sequence (proprietary firmware)
             return $"M620 S{n}A\nT{n}\nM621 S{n}A";
         }
 
@@ -189,6 +189,6 @@ namespace _Morpho4D
         }
 
         protected override Bitmap Icon => null;
-        public override Guid ComponentGuid => new Guid("77777777-8888-9999-aaaa-bbbbbbbbbbbb");
+        public override Guid ComponentGuid => new Guid("09be29b1-c1f1-422e-929e-279e37e11c73");
     }
 }

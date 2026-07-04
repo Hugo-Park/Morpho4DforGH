@@ -11,8 +11,8 @@ using Rhino.Display;
 namespace _Morpho4D
 {
     /// <summary>
-    /// Rhino 뷰포트를 캡처해 파일로 저장한다. 논문 figure 생산용.
-    /// RhinoView.CaptureToBitmap 사용.
+    /// Captures the Rhino viewport and saves it to a file. Useful for producing thesis figures.
+    /// Uses RhinoView.CaptureToBitmap.
     /// </summary>
 #if NET5_0_OR_GREATER
     [SupportedOSPlatform("windows")]
@@ -21,25 +21,25 @@ namespace _Morpho4D
     {
         public ViewportRecorderComponent()
           : base("Viewport Recorder", "VPRec",
-              "현재 Rhino 뷰포트를 이미지로 캡처·저장한다. 논문 figure 생산용.",
-              "Morpho4D", "Utility")
+              "Captures and saves the current Rhino viewport as an image. Useful for producing thesis figures.",
+              "Morpho4D", "08 Utility")
         {
         }
 
         protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
             pManager.AddTextParameter("Output Path", "Out",
-                "저장할 이미지 파일 경로 (.png/.jpg/.bmp)", GH_ParamAccess.item, "");
+                "Image file path to save (.png/.jpg/.bmp)", GH_ParamAccess.item, "");
             pManager.AddTextParameter("View Name", "V",
-                "캡처할 뷰 이름 ('Perspective','Top','Front','Right' 등)", GH_ParamAccess.item, "Perspective");
-            pManager.AddIntegerParameter("Width", "W", "이미지 너비 (px)", GH_ParamAccess.item, 1920);
-            pManager.AddIntegerParameter("Height", "H", "이미지 높이 (px)", GH_ParamAccess.item, 1080);
-            pManager.AddBooleanParameter("Capture", "Cap", "true로 설정하면 캡처 실행", GH_ParamAccess.item, false);
+                "Name of the view to capture (e.g., 'Perspective', 'Top', 'Front', 'Right')", GH_ParamAccess.item, "Perspective");
+            pManager.AddIntegerParameter("Width", "W", "Image width (px)", GH_ParamAccess.item, 1920);
+            pManager.AddIntegerParameter("Height", "H", "Image height (px)", GH_ParamAccess.item, 1080);
+            pManager.AddBooleanParameter("Capture", "Cap", "Set to true to execute capture", GH_ParamAccess.item, false);
         }
 
         protected override void RegisterOutputParams(GH_OutputParamManager pManager)
         {
-            pManager.AddTextParameter("Status", "S", "캡처 결과", GH_ParamAccess.item);
+            pManager.AddTextParameter("Status", "S", "Capture result", GH_ParamAccess.item);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
@@ -56,19 +56,19 @@ namespace _Morpho4D
 
             if (!capture)
             {
-                DA.SetData(0, "Capture=false. true로 설정하면 캡처합니다.");
+                DA.SetData(0, "Capture=false. Set to true to capture.");
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(outPath))
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "저장 경로를 지정하세요.");
-                DA.SetData(0, "ERROR: 경로 없음");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Please specify a save path.");
+                DA.SetData(0, "ERROR: No path specified");
                 return;
             }
 
             var doc = RhinoDoc.ActiveDoc;
-            if (doc == null) { DA.SetData(0, "ERROR: RhinoDoc 없음"); return; }
+            if (doc == null) { DA.SetData(0, "ERROR: No RhinoDoc found"); return; }
 
             RhinoView targetView = null;
             foreach (var v in doc.Views)
@@ -84,7 +84,7 @@ namespace _Morpho4D
             {
                 targetView = doc.Views.ActiveView;
                 AddRuntimeMessage(GH_RuntimeMessageLevel.Warning,
-                    $"뷰 '{viewName}'을 찾지 못해 현재 활성 뷰를 사용합니다.");
+                    $"View '{viewName}' not found. Using the current active view.");
             }
 
             try
@@ -98,7 +98,7 @@ namespace _Morpho4D
                 else if (ext == ".bmp") fmt = System.Drawing.Imaging.ImageFormat.Bmp;
 
                 bmp.Save(outPath, fmt);
-                DA.SetData(0, $"저장 완료: {outPath} ({w}×{h}px)");
+                DA.SetData(0, $"Saved successfully: {outPath} ({w}×{h}px)");
             }
             catch (Exception ex)
             {
@@ -108,6 +108,6 @@ namespace _Morpho4D
         }
 
         protected override Bitmap Icon => null;
-        public override Guid ComponentGuid => new Guid("AAAAAAA6-1111-2222-3333-444444444444");
+        public override Guid ComponentGuid => new Guid("5fe6803d-d2f3-474d-b8c2-1aa09bac39fa");
     }
 }

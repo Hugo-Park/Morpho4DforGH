@@ -14,7 +14,7 @@ namespace _Morpho4D
         public ConstructHydrogel()
           : base("Construct Hydrogel", "Hydrogel",
             "Create hydrogel material by defining variables",
-            "Morpho4D", "Material")
+            "Morpho4D", "02 Material")
         {
         }
 

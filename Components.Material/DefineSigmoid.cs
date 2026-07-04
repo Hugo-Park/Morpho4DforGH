@@ -13,7 +13,7 @@ namespace _Morpho4D
         public DefineSigmoid()
           : base("Define Sigmoid", "SM",
             "Calculate Young's modulus using a sigmoid-based transition model.",
-            "Morpho4D", "Material")
+            "Morpho4D", "02 Material")
         {
         }
 

@@ -10,22 +10,22 @@ namespace _Morpho4D
     {
         public ConstructPLAComponent()
           : base("Construct PLA", "PLA",
-              "PLA 패시브 레이어 재료를 생성한다. BilayerMaterial의 passive 레이어로 사용.",
-              "Morpho4D", "Material")
+              "Constructs PLA passive layer material. Used as a passive layer for BilayerMaterial.",
+              "Morpho4D", "02 Material")
         {
         }
 
         protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
-            pManager.AddGenericParameter("Material Base", "mB", "MaterialBaseComponent 출력값", GH_ParamAccess.item);
+            pManager.AddGenericParameter("Material Base", "mB", "MaterialBaseComponent output", GH_ParamAccess.item);
             pManager.AddNumberParameter("Thermal Softening", "TS",
-                "단위 온도당 강성 감소량 (MPa/°C). 0이면 온도 무관 rigid.", GH_ParamAccess.item, 0.0);
+                "Stiffness reduction per unit temperature (MPa/°C). If 0, it is rigid regardless of temperature.", GH_ParamAccess.item, 0.0);
         }
 
         protected override void RegisterOutputParams(GH_OutputParamManager pManager)
         {
-            pManager.AddGenericParameter("PLA Material", "M", "PassiveMat 재료 객체", GH_ParamAccess.item);
-            pManager.AddTextParameter("Inspection", "?", "재료 정보", GH_ParamAccess.list);
+            pManager.AddGenericParameter("PLA Material", "M", "PassiveMat material object", GH_ParamAccess.item);
+            pManager.AddTextParameter("Inspection", "?", "Material information", GH_ParamAccess.list);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
@@ -51,6 +51,6 @@ namespace _Morpho4D
         }
 
         protected override Bitmap Icon => null;
-        public override Guid ComponentGuid => new Guid("AAAAAAA9-1111-2222-3333-444444444444");
+        public override Guid ComponentGuid => new Guid("7c5ed220-a983-4ade-a54f-e0c488ffeadb");
     }
 }

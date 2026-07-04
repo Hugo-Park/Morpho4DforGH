@@ -13,7 +13,7 @@ namespace _Morpho4D
         public ConstructSMP()
           : base("Construct SMP", "SMP",
             "Create SMP material by defining variables",
-            "Morpho4D", "Material")
+            "Morpho4D", "02 Material")
         {
         }
 

@@ -20,7 +20,7 @@ namespace _Morpho4D
         public SetStimulus()
           : base("SetStimulusTest(HeatStim)", "Nickname",
             "Stimulus Test(HeatStim)",
-            "Morpho4D", "Stimulus")
+            "Morpho4D", "03 Stimulus")
         {
         }
 

@@ -11,34 +11,34 @@ using Rhino.Geometry;
 namespace _Morpho4D
 {
     /// <summary>
-    /// 시뮬레이션 결과와 실측 포인트를 비교한다.
-    /// 처리 순서: 호길이 재샘플 → Kabsch 정렬(MathNet SVD) → RMSE/최대편차 계산 → 논문용 CSV 출력
+    /// Compares simulation results with measured points.
+    /// Processing sequence: Arc length resampling -> Kabsch alignment (MathNet SVD) -> RMSE/Max deviation calculation -> CSV output for paper
     /// </summary>
     public class ValidationOverlayComponent : GH_Component
     {
         public ValidationOverlayComponent()
           : base("Validation Overlay", "ValOver",
-              "시뮬레이션과 실측 결과를 Kabsch 정렬 후 RMSE로 비교한다.",
-              "Morpho4D", "Validation")
+              "Compares simulation and measured results using RMSE after Kabsch alignment.",
+              "Morpho4D", "06 Validation")
         {
         }
 
         protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
-            pManager.AddGenericParameter("Sim Voxels", "SimVX", "시뮬레이션 완료 복셀 리스트", GH_ParamAccess.list);
-            pManager.AddPointParameter("Measured Points", "MeasPts", "MeasurementImporter 출력 실측 포인트", GH_ParamAccess.list);
-            pManager.AddIntegerParameter("Resample N", "N", "정렬 전 재샘플 포인트 수", GH_ParamAccess.item, 20);
-            pManager.AddTextParameter("CSV Output Path", "CSV", "논문용 결과 CSV 저장 경로 (비어있으면 미저장)", GH_ParamAccess.item, "");
-            pManager.AddBooleanParameter("Run", "Run", "true로 설정하면 계산 실행", GH_ParamAccess.item, false);
+            pManager.AddGenericParameter("Sim Voxels", "SimVX", "List of simulated voxels", GH_ParamAccess.list);
+            pManager.AddPointParameter("Measured Points", "MeasPts", "Measured points from MeasurementImporter", GH_ParamAccess.list);
+            pManager.AddIntegerParameter("Resample N", "N", "Number of points to resample before alignment", GH_ParamAccess.item, 20);
+            pManager.AddTextParameter("CSV Output Path", "CSV", "Path to save result CSV for paper (empty if not saving)", GH_ParamAccess.item, "");
+            pManager.AddBooleanParameter("Run", "Run", "Execute calculation if set to true", GH_ParamAccess.item, false);
         }
 
         protected override void RegisterOutputParams(GH_OutputParamManager pManager)
         {
-            pManager.AddNumberParameter("RMSE", "RMSE", "정렬 후 RMS 편차 (mm)", GH_ParamAccess.item);
-            pManager.AddNumberParameter("Max Deviation", "MaxD", "최대 편차 (mm)", GH_ParamAccess.item);
-            pManager.AddPointParameter("Aligned Sim Points", "AlignSim", "정렬된 시뮬레이션 포인트", GH_ParamAccess.list);
-            pManager.AddPointParameter("Aligned Meas Points", "AlignMeas", "정렬된 실측 포인트", GH_ParamAccess.list);
-            pManager.AddTextParameter("Report", "R", "비교 결과 요약", GH_ParamAccess.item);
+            pManager.AddNumberParameter("RMSE", "RMSE", "RMS deviation after alignment (mm)", GH_ParamAccess.item);
+            pManager.AddNumberParameter("Max Deviation", "MaxD", "Maximum deviation (mm)", GH_ParamAccess.item);
+            pManager.AddPointParameter("Aligned Sim Points", "AlignSim", "Aligned simulation points", GH_ParamAccess.list);
+            pManager.AddPointParameter("Aligned Meas Points", "AlignMeas", "Aligned measured points", GH_ParamAccess.list);
+            pManager.AddTextParameter("Report", "R", "Comparison result summary", GH_ParamAccess.item);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
@@ -66,19 +66,19 @@ namespace _Morpho4D
 
             if (simPts.Count < 3 || measPts.Count < 3)
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "포인트가 3개 미만입니다.");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Less than 3 points.");
                 return;
             }
 
-            // 1단계: 호길이 재샘플 (균등 간격으로 N개 선택)
+            // Step 1: Arc length resample (select N points with uniform spacing)
             var simResampled = ResampleArcLength(simPts, resampleN);
             var measResampled = ResampleArcLength(measPts, resampleN);
 
-            // 2단계: Kabsch 정렬 (MathNet SVD)
+            // Step 2: Kabsch alignment (MathNet SVD)
             List<Point3d> simAligned, measAligned;
             KabschAlign(simResampled, measResampled, out simAligned, out measAligned);
 
-            // 3단계: RMSE 및 최대편차 계산
+            // Step 3: Calculate RMSE and maximum deviation
             double sumSq = 0, maxD = 0;
             for (int i = 0; i < simAligned.Count; i++)
             {
@@ -88,7 +88,7 @@ namespace _Morpho4D
             }
             double rmse = Math.Sqrt(sumSq / simAligned.Count);
 
-            // 4단계: CSV 저장
+            // Step 4: Save CSV
             var report = $"RMSE = {rmse:F4} mm | MaxDev = {maxD:F4} mm | N = {simAligned.Count}";
             if (!string.IsNullOrWhiteSpace(csvOut))
             {
@@ -104,11 +104,11 @@ namespace _Morpho4D
                     csvLines.Add($",,,,,,RMSE,{rmse:F4}");
                     csvLines.Add($",,,,,,MaxDev,{maxD:F4}");
                     File.WriteAllLines(csvOut, csvLines);
-                    report += $" | CSV 저장됨: {csvOut}";
+                    report += $" | CSV saved: {csvOut}";
                 }
                 catch (Exception ex)
                 {
-                    AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"CSV 저장 실패: {ex.Message}");
+                    AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Failed to save CSV: {ex.Message}");
                 }
             }
 
@@ -144,18 +144,18 @@ namespace _Morpho4D
             return result;
         }
 
-        // Kabsch 정렬: simPts를 measPts에 최적 회전·평행이동 정렬
+        // Kabsch alignment: Optimal rotation and translation alignment of simPts to measPts
         private static void KabschAlign(
             List<Point3d> simPts, List<Point3d> measPts,
             out List<Point3d> simAligned, out List<Point3d> measAligned)
         {
             int n = Math.Min(simPts.Count, measPts.Count);
 
-            // 무게중심 계산
+            // Calculate centroid
             Point3d cSim = Centroid(simPts, n);
             Point3d cMeas = Centroid(measPts, n);
 
-            // 중심화
+            // Center points
             var P = Matrix<double>.Build.Dense(n, 3);
             var Q = Matrix<double>.Build.Dense(n, 3);
             for (int i = 0; i < n; i++)
@@ -168,7 +168,7 @@ namespace _Morpho4D
                 Q[i, 2] = measPts[i].Z - cMeas.Z;
             }
 
-            // 공분산 행렬 H = P^T * Q
+            // Covariance matrix H = P^T * Q
             var H = P.TransposeThisAndMultiply(Q);
 
             // SVD
@@ -176,7 +176,7 @@ namespace _Morpho4D
             var U = svd.U;
             var Vt = svd.VT;
 
-            // 회전 행렬 R = V * U^T (반사 보정 포함)
+            // Rotation matrix R = V * U^T (including reflection correction)
             var R = Vt.Transpose().Multiply(U.Transpose());
             if (R.Determinant() < 0)
             {
@@ -185,7 +185,7 @@ namespace _Morpho4D
                 R = Vm.Multiply(U.Transpose());
             }
 
-            // 정렬된 포인트 생성
+            // Create aligned points
             simAligned = new List<Point3d>();
             for (int i = 0; i < n; i++)
             {
@@ -207,6 +207,6 @@ namespace _Morpho4D
         }
 
         protected override Bitmap Icon => null;
-        public override Guid ComponentGuid => new Guid("9B2D5F83-4A6C-4EA2-B7F9-2C3D4E5F6071");
+        public override Guid ComponentGuid => new Guid("3c10865b-6880-472b-867d-d7243c6d43f2");
     }
 }

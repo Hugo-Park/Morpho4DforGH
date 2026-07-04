@@ -14,7 +14,7 @@ namespace _Morpho4D
         public VoxelPicker()
           : base("Voxel Picker", "vxPick",
             "Pick and Retrive a Specific Voxel from a List by its Unique ID for Detailed Inspection",
-            "Morpho4D", "Voxel")
+            "Morpho4D", "01 Voxel")
         {
         }
 

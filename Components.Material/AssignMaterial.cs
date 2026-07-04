@@ -11,28 +11,28 @@ namespace _Morpho4D
     {
         public AssignMaterialComponent()
           : base("Assign Material", "Assign",
-              "Brep 영역 기반으로 복셀에 재료를 할당한다. 여러 재료를 지역별로 지정할 때 사용.",
-              "Morpho4D", "Material")
+              "Assigns material to voxels based on a Brep region. Used to assign multiple materials by region.",
+              "Morpho4D", "02 Material")
         {
         }
 
         protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
-            pManager.AddGenericParameter("Voxels", "VX", "입력 복셀 리스트", GH_ParamAccess.list);
-            pManager.AddGenericParameter("Material", "M", "지정할 재료", GH_ParamAccess.item);
+            pManager.AddGenericParameter("Voxels", "VX", "Input voxel list", GH_ParamAccess.list);
+            pManager.AddGenericParameter("Material", "M", "Material to assign", GH_ParamAccess.item);
             pManager.AddBrepParameter("Region", "R",
-                "재료를 지정할 Brep 영역. 미입력 시 전체 복셀에 적용.",
+                "Brep region to assign material. If not provided, applies to all voxels.",
                 GH_ParamAccess.item);
             pManager[2].Optional = true;
             pManager.AddBooleanParameter("Active", "A",
-                "이 재료를 active(SMP) 재료로 표시할지 여부", GH_ParamAccess.item, false);
+                "Whether to mark this material as an active (SMP) material", GH_ParamAccess.item, false);
             pManager[3].Optional = true;
         }
 
         protected override void RegisterOutputParams(GH_OutputParamManager pManager)
         {
-            pManager.AddGenericParameter("Voxels", "VX", "재료가 지정된 복셀 리스트", GH_ParamAccess.list);
-            pManager.AddIntegerParameter("Assigned Count", "n", "지정된 복셀 수", GH_ParamAccess.item);
+            pManager.AddGenericParameter("Voxels", "VX", "List of voxels with material assigned", GH_ParamAccess.list);
+            pManager.AddIntegerParameter("Assigned Count", "n", "Number of assigned voxels", GH_ParamAccess.item);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
@@ -73,6 +73,6 @@ namespace _Morpho4D
         }
 
         protected override Bitmap Icon => null;
-        public override Guid ComponentGuid => new Guid("AAAAAAA8-1111-2222-3333-444444444444");
+        public override Guid ComponentGuid => new Guid("762b5bda-2599-4cc2-b1d8-3e61f5b0685a");
     }
 }

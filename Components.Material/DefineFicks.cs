@@ -13,7 +13,7 @@ namespace _Morpho4D
         public DefineFicks()
           : base("Define Fick's", "F's",
             "Calculate hydrational level using Fick's law of diffusion",
-            "Morpho4D", "Material")
+            "Morpho4D", "02 Material")
         {
         }
 

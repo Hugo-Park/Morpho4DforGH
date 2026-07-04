@@ -8,36 +8,36 @@ using Rhino.Geometry;
 namespace _Morpho4D
 {
     /// <summary>
-    /// 복셀에 점하중 또는 중력 하중을 적용한다.
-    /// VoxelCell.appliedLoad 필드를 설정해 Solver의 calculateTotalEnergy/Gradient에서 -F·x 항으로 반영됨.
+    /// Applies point loads or gravity loads to voxels.
+    /// By setting the VoxelCell.appliedLoad field, it is reflected as an -F·x term in the Solver's calculateTotalEnergy/Gradient.
     /// </summary>
     public class LoadApplicatorComponent : GH_Component
     {
         public LoadApplicatorComponent()
           : base("Load Applicator", "Load",
-              "복셀에 점하중(중력 포함)을 적용한다. Solver에서 퍼텐셜 에너지 -F·x 항으로 반영됨.",
-              "Morpho4D", "Utility")
+              "Applies point loads (including gravity) to voxels. Reflected as a potential energy -F·x term in the Solver.",
+              "Morpho4D", "04 Solver")
         {
         }
 
         protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
-            pManager.AddGenericParameter("Voxels", "VX", "입력 복셀 리스트", GH_ParamAccess.list);
+            pManager.AddGenericParameter("Voxels", "VX", "Input voxel list", GH_ParamAccess.list);
             pManager.AddVectorParameter("Load Vector", "F",
-                "단위 복셀당 힘 벡터 (N). 중력은 (0,0,-mg) 방향.", GH_ParamAccess.item, Vector3d.Zero);
+                "Force vector per voxel (N). Gravity is in the (0,0,-mg) direction.", GH_ParamAccess.item, Vector3d.Zero);
             pManager.AddBrepParameter("Load Region", "R",
-                "하중을 적용할 영역 Brep. 미입력 시 전체 복셀에 적용.", GH_ParamAccess.item);
+                "Brep region to apply the load. If not provided, applies to all voxels.", GH_ParamAccess.item);
             pManager[2].Optional = true;
             pManager.AddBooleanParameter("Gravity", "G",
-                "true이면 Z 방향 중력(9.81 m/s²×질량) 추가 적용", GH_ParamAccess.item, false);
+                "If true, additionally applies Z-direction gravity (9.81 m/s² × mass)", GH_ParamAccess.item, false);
             pManager.AddNumberParameter("Mass Per Voxel", "m",
-                "복셀당 질량 (kg). Gravity=true일 때만 사용.", GH_ParamAccess.item, 0.001);
+                "Mass per voxel (kg). Only used when Gravity=true.", GH_ParamAccess.item, 0.001);
         }
 
         protected override void RegisterOutputParams(GH_OutputParamManager pManager)
         {
-            pManager.AddGenericParameter("Voxels", "VX", "하중이 적용된 복셀 리스트", GH_ParamAccess.list);
-            pManager.AddIntegerParameter("Loaded Count", "n", "하중 적용된 복셀 수", GH_ParamAccess.item);
+            pManager.AddGenericParameter("Voxels", "VX", "List of voxels with applied loads", GH_ParamAccess.list);
+            pManager.AddIntegerParameter("Loaded Count", "n", "Number of loaded voxels", GH_ParamAccess.item);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
@@ -79,6 +79,6 @@ namespace _Morpho4D
         }
 
         protected override Bitmap Icon => null;
-        public override Guid ComponentGuid => new Guid("AAAAAAA2-1111-2222-3333-444444444444");
+        public override Guid ComponentGuid => new Guid("c12d2c78-1a85-49f9-9cd1-24257fb77bf5");
     }
 }

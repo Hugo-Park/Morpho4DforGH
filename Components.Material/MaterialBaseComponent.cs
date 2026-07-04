@@ -13,7 +13,7 @@ namespace _Morpho4D
         public MaterialBaseComponent()
           : base("Material Base", "mB",
             "Define material's basic informations before creating specific materials",
-            "Morpho4D", "Material")
+            "Morpho4D", "02 Material")
         {
         }
 

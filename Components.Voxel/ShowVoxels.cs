@@ -14,7 +14,7 @@ namespace _Morpho4D
         public ShowVoxels()
           : base("Show Voxels", "sVX",
             "Show converted Voxels",
-            "Morpho4D", "Voxel")
+            "Morpho4D", "01 Voxel")
         {
         }
 
