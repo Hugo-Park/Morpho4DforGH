@@ -34,7 +34,6 @@ namespace _Morpho4D
         {
             pManager.AddMeshParameter("Mesh", "M", "Deformed geometry after simulation", GH_ParamAccess.item);
             pManager.AddPointParameter("Points", "P", "Optimized voxel center points", GH_ParamAccess.list);
-            pManager.AddNumberParameter("Energy History", "EH", "Total potential energy per solver evaluation (feed to Solver History Monitor)", GH_ParamAccess.list);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
@@ -85,29 +84,39 @@ namespace _Morpho4D
                     {
                         referenceMesh.Append(m);
                     }
+                    referenceMesh.Vertices.CombineIdentical(true, true);
+                    referenceMesh.Weld(0.1);
                 }
             }
             
-            // 솔버 시작
+            // 솔버 시작 — G3: setUpFromGrid 사용 (mesh 기반 연결성 결함 C 해결)
             MorphoSolver solver = new MorphoSolver(voxels);
-            solver.setUp(voxels, referenceMesh);
+            solver.setUpFromGrid(voxels);  // 기존 setUp(voxels, referenceMesh)를 대체
             solver.execute(time, stimulus[0]);
 
             // 출력 점 리스트 생성
             List<Point3d> resultPoints = solver.getResultPoints();
 
-            // 출력 메쉬 생성
-            Mesh deformedMesh = referenceMesh.DuplicateMesh();
-            
-            deformedMesh.VertexColors.Clear();
-            for (int i = 0; i < deformedMesh.Vertices.Count; i++)
-            {
-                if (i < resultPoints.Count)
-                {
-                    deformedMesh.Vertices.SetVertex(i, (Point3f)resultPoints[i]);
+            // G0: voxel 기반 박스 메쉬 출력 (결함 A 수정 — mesh 인덱스 대응 미보장 문제 해결)
+            bool gridSafe = voxels.Count > 0;
+            Mesh deformedMesh;
 
-                    Color previewCOlor = voxels[i].assignedMaterial.getPreviewColor();
-                    deformedMesh.VertexColors.Add(previewCOlor);
+            if (gridSafe)
+            {
+                deformedMesh = BuildDeformedBoxMesh(voxels, resultPoints);
+            }
+            else
+            {
+                // 이론상 도달하지 않음 — 안전망으로 유지
+                deformedMesh = referenceMesh.DuplicateMesh();
+                deformedMesh.VertexColors.Clear();
+                for (int i = 0; i < deformedMesh.Vertices.Count; i++)
+                {
+                    if (i < resultPoints.Count)
+                    {
+                        deformedMesh.Vertices.SetVertex(i, (Point3f)resultPoints[i]);
+                        deformedMesh.VertexColors.Add(voxels[i].assignedMaterial.getPreviewColor());
+                    }
                 }
             }
 
@@ -116,7 +125,27 @@ namespace _Morpho4D
 
             DA.SetData(0, deformedMesh);
             DA.SetDataList(1, resultPoints);
-            DA.SetDataList(2, solver.energyHistory);
+        }
+
+        private Mesh BuildDeformedBoxMesh(List<VoxelCell> voxels, List<Point3d> resultPoints)
+        {
+            Mesh result = new Mesh();
+            if (voxels.Count == 0) return result;
+            double size = voxels[0].voxelSize;
+            for (int i = 0; i < voxels.Count; i++)
+            {
+                Point3d center = (i < resultPoints.Count) ? resultPoints[i] : voxels[i].currentPoint;
+                Plane pl = new Plane(center, Vector3d.ZAxis);
+                Interval iv = new Interval(-size / 2.0, size / 2.0);
+                Mesh box = Mesh.CreateFromBox(new Box(pl, iv, iv, iv), 1, 1, 1);
+                Color c = voxels[i].assignedMaterial != null
+                    ? voxels[i].assignedMaterial.getPreviewColor()
+                    : Color.Gray;
+                box.VertexColors.Clear();
+                for (int k = 0; k < box.Vertices.Count; k++) box.VertexColors.Add(c);
+                result.Append(box);
+            }
+            return result;
         }
 
         protected override System.Drawing.Bitmap Icon => null;

@@ -1,90 +1,101 @@
 using System;
 using System.Collections.Generic;
-
-using Grasshopper;
+using System.Drawing;
 using Grasshopper.Kernel;
-using Rhino.Geometry;
 using Morpho4D.Models;
+using Rhino.Geometry;
 
 namespace _Morpho4D
 {
-    /// <summary>
-    /// [P0-1 다재료 / P0-2 굽힘] 한 평면을 기준으로 복셀을 위/아래 두 그룹으로 나누고 각각 다른 재료를 지정한다.
-    /// 이것이 4D 프린팅의 정석 케이스인 'bilayer'를 만든다. 위층(예: 팽창 hydrogel)과 아래층(예: 비팽창)의
-    /// 차등 팽창 + (P0-2 대칭 스프링) 으로 시트가 휘어진다.
-    /// 사용법: 얇은 판형 Brep을 복셀화 -> 두께 중앙에 Base Plane을 놓고 위=능동재료, 아래=수동재료.
-    /// </summary>
-    public class BilayerMaterial : GH_Component
+    public class BilayerMaterialComponent : GH_Component
     {
-        public BilayerMaterial()
+        public BilayerMaterialComponent()
           : base("Bilayer Material", "Bilayer",
-            "Split voxels by a plane and assign a top and bottom material. Creates a bilayer whose differential expansion produces bending.",
-            "Morpho4D", "Material")
+              "복셀 리스트를 평면으로 분할해 상단=active(SMP), 하단=passive(PLA) 재료를 지정한다.",
+              "Morpho4D", "Material")
         {
         }
 
-        protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
+        protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
-            pManager.AddGenericParameter("Voxels", "VX", "Input voxel list", GH_ParamAccess.list);
-            pManager.AddPlaneParameter("Base Plane", "Pl", "Split plane. Voxels on the +normal side get the Top material, the others get Bottom.", GH_ParamAccess.item, Plane.WorldXY);
-            pManager.AddGenericParameter("Top Material", "Mt", "Material for voxels on the +normal side of the plane", GH_ParamAccess.item);
-            pManager.AddGenericParameter("Bottom Material", "Mb", "Material for voxels on the -normal side of the plane", GH_ParamAccess.item);
+            pManager.AddGenericParameter("Voxels", "VX", "입력 복셀 리스트", GH_ParamAccess.list);
+            pManager.AddGenericParameter("Active Material", "AM", "상단(active) 재료 — SmpMat 권장", GH_ParamAccess.item);
+            pManager.AddGenericParameter("Passive Material", "PM", "하단(passive) 재료 — PassiveMat(PLA) 권장", GH_ParamAccess.item);
+            pManager.AddPlaneParameter("Split Plane", "P",
+                "분할 평면. 이 평면보다 법선 방향 위가 active. 미입력 시 Z 중앙으로 자동 설정(AutoCenter).",
+                GH_ParamAccess.item);
+            pManager[3].Optional = true;
         }
 
-        protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
+        protected override void RegisterOutputParams(GH_OutputParamManager pManager)
         {
-            pManager.AddGenericParameter("Voxels", "VX", "Output voxels with bilayer material assignment", GH_ParamAccess.list);
-            pManager.AddTextParameter("Inspection", "?", "Split summary", GH_ParamAccess.list);
+            pManager.AddGenericParameter("Voxels", "VX", "재료가 지정된 복셀 리스트", GH_ParamAccess.list);
+            pManager.AddIntegerParameter("Active Count", "nA", "active 복셀 수", GH_ParamAccess.item);
+            pManager.AddIntegerParameter("Passive Count", "nP", "passive 복셀 수", GH_ParamAccess.item);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            this.ClearRuntimeMessages();
+            var voxelGoos = new List<VoxelCellGoo>();
+            Material activeMat = null;
+            Material passiveMat = null;
+            Plane splitPlane = Plane.Unset;
 
-            List<VoxelCellGoo> goos = new List<VoxelCellGoo>();
-            Plane plane = Plane.WorldXY;
-            Material topMat = null;
-            Material botMat = null;
+            if (!DA.GetDataList(0, voxelGoos)) return;
+            if (!DA.GetData(1, ref activeMat)) return;
+            if (!DA.GetData(2, ref passiveMat)) return;
+            DA.GetData(3, ref splitPlane);
 
-            if (!DA.GetDataList(0, goos)) { return; }
-            if (!DA.GetData(1, ref plane)) { return; }
-            if (!DA.GetData(2, ref topMat)) { return; }
-            if (!DA.GetData(3, ref botMat)) { return; }
+            var voxels = new List<VoxelCell>();
+            foreach (var g in voxelGoos)
+                if (g?.Value != null) voxels.Add(g.Value);
 
-            if (topMat == null || botMat == null)
+            if (voxels.Count == 0) return;
+
+            if (!voxels[0].isGridVoxel)
+                this.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning,
+                    "BilayerMaterial expects volumetric voxels (default in this base).");
+
+            // AutoCenter: 지정 평면 없으면 Z 중앙 분할
+            if (splitPlane == Plane.Unset)
             {
-                this.AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Both Top and Bottom material are required");
-                return;
+                double zMin = double.MaxValue, zMax = double.MinValue;
+                foreach (var v in voxels)
+                {
+                    if (v.initialPoint.Z < zMin) zMin = v.initialPoint.Z;
+                    if (v.initialPoint.Z > zMax) zMax = v.initialPoint.Z;
+                }
+                double zMid = (zMin + zMax) * 0.5;
+                splitPlane = new Plane(new Point3d(0, 0, zMid), Vector3d.ZAxis);
             }
 
-            List<VoxelCell> voxels = new List<VoxelCell>();
-            foreach (var goo in goos)
+            int nA = 0, nP = 0;
+            var outGoos = new List<VoxelCellGoo>();
+
+            foreach (var v in voxels)
             {
-                if (goo != null && goo.Value != null) voxels.Add(goo.Value);
+                double dot = (v.initialPoint - splitPlane.Origin) * splitPlane.Normal;
+                if (dot >= 0)
+                {
+                    v.assignedMaterial = activeMat;
+                    v.isActive = true;
+                    nA++;
+                }
+                else
+                {
+                    v.assignedMaterial = passiveMat;
+                    v.isActive = false;
+                    nP++;
+                }
+                outGoos.Add(new VoxelCellGoo(v));
             }
 
-            int top = 0, bottom = 0;
-            foreach (VoxelCell v in voxels)
-            {
-                // Plane.DistanceTo는 부호 있는 거리(법선 방향이 +)를 반환
-                double signed = plane.DistanceTo(v.currentPoint);
-                if (signed >= 0.0) { v.assignedMaterial = topMat; top++; }
-                else { v.assignedMaterial = botMat; bottom++; }
-            }
-
-            List<string> stat = new List<string>();
-            stat.Add(string.Format("Top ({0}): {1} voxels", topMat.getMaterialName(), top));
-            stat.Add(string.Format("Bottom ({0}): {1} voxels", botMat.getMaterialName(), bottom));
-            stat.Add(string.Format("Plane origin: ({0:f3})", plane.Origin));
-            if (top == 0 || bottom == 0)
-                stat.Add("WARNING: one side is empty - move the plane into the body's thickness.");
-
-            DA.SetDataList(0, goos);
-            DA.SetDataList(1, stat);
+            DA.SetDataList(0, outGoos);
+            DA.SetData(1, nA);
+            DA.SetData(2, nP);
         }
 
-        protected override System.Drawing.Bitmap Icon => null;
-
-        public override Guid ComponentGuid => new Guid("261e353b-f65e-422d-b2c8-d5175aa255b7");
+        protected override Bitmap Icon => null;
+        public override Guid ComponentGuid => new Guid("22222222-3333-4444-5555-666666666666");
     }
 }

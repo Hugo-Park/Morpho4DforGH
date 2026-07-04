@@ -1,87 +1,78 @@
 using System;
 using System.Collections.Generic;
-
-using Grasshopper;
+using System.Drawing;
 using Grasshopper.Kernel;
-using Rhino.Geometry;
 using Morpho4D.Models;
+using Rhino.Geometry;
 
 namespace _Morpho4D
 {
-    /// <summary>
-    /// [P0-1 다재료] 입력된 영역(Region Brep) 안에 들어오는 복셀들에 대해 assignedMaterial 을 덮어쓴다.
-    /// BrepToVoxel 로 기본 재료를 깐 뒤, 이 컴포넌트를 체인으로 연결해 부분 영역에 다른 재료를 지정할 수 있다.
-    /// (VoxelCell 은 참조 타입이므로 동일 객체를 통과시키며 mutate 한다 - Anchor 와 동일한 패턴)
-    /// </summary>
-    public class AssignMaterial : GH_Component
+    public class AssignMaterialComponent : GH_Component
     {
-        public AssignMaterial()
-          : base("Assign Material", "AsgnMat",
-            "Override the material of voxels that fall inside a region Brep. Chain after 'Brep to Voxel' to build multi-material bodies.",
-            "Morpho4D", "Material")
+        public AssignMaterialComponent()
+          : base("Assign Material", "Assign",
+              "Brep 영역 기반으로 복셀에 재료를 할당한다. 여러 재료를 지역별로 지정할 때 사용.",
+              "Morpho4D", "Material")
         {
         }
 
-        protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
+        protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
-            pManager.AddGenericParameter("Voxels", "VX", "Input voxel list", GH_ParamAccess.list);
-            pManager.AddGenericParameter("Material", "M", "Material to assign to voxels inside the region", GH_ParamAccess.item);
-            pManager.AddBrepParameter("Region", "R", "Closed Brep region; voxels whose center is inside get the material", GH_ParamAccess.item);
+            pManager.AddGenericParameter("Voxels", "VX", "입력 복셀 리스트", GH_ParamAccess.list);
+            pManager.AddGenericParameter("Material", "M", "지정할 재료", GH_ParamAccess.item);
+            pManager.AddBrepParameter("Region", "R",
+                "재료를 지정할 Brep 영역. 미입력 시 전체 복셀에 적용.",
+                GH_ParamAccess.item);
+            pManager[2].Optional = true;
+            pManager.AddBooleanParameter("Active", "A",
+                "이 재료를 active(SMP) 재료로 표시할지 여부", GH_ParamAccess.item, false);
+            pManager[3].Optional = true;
         }
 
-        protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
+        protected override void RegisterOutputParams(GH_OutputParamManager pManager)
         {
-            pManager.AddGenericParameter("Voxels", "VX", "Output voxels (material overridden inside the region)", GH_ParamAccess.list);
-            pManager.AddTextParameter("Inspection", "?", "Assignment summary", GH_ParamAccess.list);
+            pManager.AddGenericParameter("Voxels", "VX", "재료가 지정된 복셀 리스트", GH_ParamAccess.list);
+            pManager.AddIntegerParameter("Assigned Count", "n", "지정된 복셀 수", GH_ParamAccess.item);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            this.ClearRuntimeMessages();
-
-            List<VoxelCellGoo> goos = new List<VoxelCellGoo>();
+            var voxelGoos = new List<VoxelCellGoo>();
             Material mat = null;
             Brep region = null;
+            bool isActive = false;
 
-            if (!DA.GetDataList(0, goos)) { return; }
-            if (!DA.GetData(1, ref mat)) { return; }
-            if (!DA.GetData(2, ref region)) { return; }
-
-            if (mat == null) { this.AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Material is null"); return; }
-            if (region == null || !region.IsSolid)
-            {
-                this.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Region Brep is not closed/solid; IsPointInside may be unreliable.");
-            }
-
-            List<VoxelCell> voxels = new List<VoxelCell>();
-            foreach (var goo in goos)
-            {
-                if (goo != null && goo.Value != null) voxels.Add(goo.Value);
-            }
-
-            double tol = voxels.Count > 0 ? voxels[0].voxelSize * 0.01 : 0.001;
-            if (tol <= 0) tol = 0.001;
+            if (!DA.GetDataList(0, voxelGoos)) return;
+            if (!DA.GetData(1, ref mat)) return;
+            DA.GetData(2, ref region);
+            DA.GetData(3, ref isActive);
 
             int assigned = 0;
-            foreach (VoxelCell v in voxels)
+            var outGoos = new List<VoxelCellGoo>();
+
+            foreach (var g in voxelGoos)
             {
-                if (region != null && region.IsPointInside(v.currentPoint, tol, false))
+                if (g?.Value == null) continue;
+                var v = g.Value;
+
+                bool inRegion = (region == null)
+                    || region.IsPointInside(v.initialPoint, 0.01, true);
+
+                if (inRegion)
                 {
                     v.assignedMaterial = mat;
+                    v.isActive = isActive;
                     assigned++;
                 }
+
+                outGoos.Add(new VoxelCellGoo(v));
             }
 
-            List<string> stat = new List<string>();
-            stat.Add(string.Format("Assigned Material: {0}", mat.getMaterialName()));
-            stat.Add(string.Format("Voxels in region: {0} / {1}", assigned, voxels.Count));
-
-            DA.SetDataList(0, goos);
-            DA.SetDataList(1, stat);
+            DA.SetDataList(0, outGoos);
+            DA.SetData(1, assigned);
         }
 
-        protected override System.Drawing.Bitmap Icon => null;
-
-        public override Guid ComponentGuid => new Guid("91e1a414-6b41-405d-8ad9-e2bbffbdb929");
+        protected override Bitmap Icon => null;
+        public override Guid ComponentGuid => new Guid("AAAAAAA8-1111-2222-3333-444444444444");
     }
 }

@@ -10,6 +10,7 @@ using MathNet.Numerics.Optimization;
 using MathNet.Numerics.LinearAlgebra;
 using System.Numerics;
 using Rhino;
+using MathNet.Numerics.Random;
 
 namespace Morpho4D.Solver
 {
@@ -23,6 +24,7 @@ namespace Morpho4D.Solver
         public int leftId;
         public double hingeAngle;
         public double targetAngle;
+        public Vector3d referenceNormal;
         public Hinge(int left, int center, int right)
         {
             this.leftId = left;
@@ -51,8 +53,8 @@ namespace Morpho4D.Solver
         public List<Hinge> allHinges = new List<Hinge>();
         public List<VoxelPair> allPairs = new List<VoxelPair>();
 
-        // 솔버가 목적함수를 평가할 때마다 총 포텐셜 에너지를 기록 (SolverHistoryMonitor 유틸리티용)
-        public List<double> energyHistory = new List<double>();
+        // G8: SolverHistoryMonitor가 읽는 수렴 에너지 기록
+        public List<double> energyHistory { get; } = new List<double>();
 
         /// <summary>
         /// Solver 클래스 생성자
@@ -72,7 +74,7 @@ namespace Morpho4D.Solver
         {
             this.inputVoxels = createdVoxels;
             this.buildNeighborConnectivity(referenceMesh);
-            this.buildHingeConnectivity();
+            this.buildHingeConnectivity(referenceMesh);
             this.buildVoxelpairConnectivity(referenceMesh);
         }
 
@@ -118,11 +120,15 @@ namespace Morpho4D.Solver
         /// <summary>
         /// 중심 복셀에 대해 힌지를 이루는 복셀ID를 추출한다.
         /// </summary>
-        public void buildHingeConnectivity()
+        public void buildHingeConnectivity(Mesh referenceMesh)
         {
             allHinges.Clear();
-
             if (inputVoxels == null || inputVoxels.Count == 0) { return; }
+
+            if (referenceMesh.Normals.Count == 0)
+            {
+                referenceMesh.Normals.ComputeNormals();
+            }
 
             foreach (VoxelCell centerVoxel in inputVoxels)
             {
@@ -146,7 +152,18 @@ namespace Morpho4D.Solver
                         if ((vectorA + vectorB).Length < inputVoxels[0].voxelSize * 0.5)
                         {
                             Hinge newHinge = new Hinge(idA, centerVoxel.Id, idB);
+
+                            if (referenceMesh.Normals.Count > centerVoxel.Id)
+                            {
+                                newHinge.referenceNormal = (Vector3d)referenceMesh.Normals[centerVoxel.Id];
+                            }
+                            else
+                            {
+                                newHinge.referenceNormal = Vector3d.ZAxis;
+                            }
+
                             centerVoxel.hingeIndices.Add(newHinge);
+                            newHinge.targetAngle = this.calculateInitialHingeAngle(newHinge);
                             allHinges.Add(newHinge);
                         }
                     }
@@ -179,6 +196,108 @@ namespace Morpho4D.Solver
                     allPairs.Add(new VoxelPair(vA, vB));
                 }
             }
+
+            double tolerance = 1e-4;
+            Rhino.Geometry.RTree tree = new Rhino.Geometry.RTree();
+
+            for (int i = 0; i < inputVoxels.Count; i++)
+            {
+                tree.Insert(inputVoxels[i].initialPoint, i);
+            }
+
+            for (int i = 0; i < inputVoxels.Count; i++)
+            {
+                Point3d pt = inputVoxels[i].initialPoint;
+                int currentId = i;
+
+                tree.Search(new Sphere(pt, tolerance), (sender, args) =>
+                {
+                    int neighborId = args.Id;
+                    if (neighborId > currentId)
+                    {
+                        VoxelCell vA = inputVoxels[currentId];
+                        VoxelCell vB = inputVoxels[neighborId];
+
+                        allPairs.Add(new VoxelPair(vA, vB));
+                    }
+                });
+            }
+        }
+
+        /// <summary>
+        /// G3: 체적 격자 전용 setup — mesh 없이 RTree 기반으로 연결성을 구성한다. (결함 C 해결)
+        /// </summary>
+        public void setUpFromGrid(List<VoxelCell> createdVoxels)
+        {
+            this.inputVoxels = createdVoxels;
+            this.buildGridConnectivity();
+        }
+
+        /// <summary>
+        /// G3: RTree 기반 격자 연결성 빌더. 기존 mesh 기반 buildNeighborConnectivity 3개와 병행.
+        /// </summary>
+        public void buildGridConnectivity()
+        {
+            allHinges.Clear();
+            allPairs.Clear();
+            if (inputVoxels == null || inputVoxels.Count == 0) return;
+
+            double size = inputVoxels[0].voxelSize;
+            double tol = size * 0.05;
+            Rhino.Geometry.RTree tree = new Rhino.Geometry.RTree();
+
+            for (int i = 0; i < inputVoxels.Count; i++)
+            {
+                inputVoxels[i].Id = i;
+                inputVoxels[i].neighborIndices.Clear();
+                inputVoxels[i].hingeIndices.Clear();
+                tree.Insert(inputVoxels[i].initialPoint, i);
+            }
+
+            double r18 = size * Math.Sqrt(2.0) + tol;
+            for (int i = 0; i < inputVoxels.Count; i++)
+            {
+                Point3d pi = inputVoxels[i].initialPoint;
+                int curId = i;
+                tree.Search(new Sphere(pi, r18), (sender, args) =>
+                {
+                    int j = args.Id;
+                    if (j <= curId) return;
+                    double d = pi.DistanceTo(inputVoxels[j].initialPoint);
+                    if (Math.Abs(d - size) < tol)
+                    {
+                        inputVoxels[curId].neighborIndices.Add(j);
+                        inputVoxels[j].neighborIndices.Add(curId);
+                        allPairs.Add(new VoxelPair(inputVoxels[curId], inputVoxels[j]));
+                    }
+                    else if (Math.Abs(d - size * Math.Sqrt(2.0)) < tol)
+                    {
+                        allPairs.Add(new VoxelPair(inputVoxels[curId], inputVoxels[j]));
+                    }
+                });
+            }
+
+            // 힌지: axis-aligned 정반대쌍만 생성
+            foreach (VoxelCell center in inputVoxels)
+            {
+                var nb = center.neighborIndices;
+                for (int a = 0; a < nb.Count; a++)
+                    for (int b = a + 1; b < nb.Count; b++)
+                    {
+                        Vector3d va = inputVoxels[nb[a]].initialPoint - center.initialPoint;
+                        Vector3d vb = inputVoxels[nb[b]].initialPoint - center.initialPoint;
+                        if ((va + vb).Length < size * 0.1)
+                        {
+                            Hinge h = new Hinge(nb[a], center.Id, nb[b]);
+                            Vector3d rn = Vector3d.CrossProduct(va, Vector3d.ZAxis);
+                            h.referenceNormal = (rn.Length < 1e-6) ? Vector3d.YAxis : rn;
+                            h.referenceNormal.Unitize();
+                            h.targetAngle = Math.PI;
+                            center.hingeIndices.Add(h);
+                            allHinges.Add(h);
+                        }
+                    }
+            }
         }
 
         /// <summary>
@@ -191,15 +310,49 @@ namespace Morpho4D.Solver
             Vector3d vectorLeft = inputVoxels[hinge.leftId].currentPoint - inputVoxels[hinge.centerId].currentPoint;
             Vector3d vectorRight = inputVoxels[hinge.rightId].currentPoint - inputVoxels[hinge.centerId].currentPoint;
 
+            if (vectorLeft.Length < 1e-9 || vectorRight.Length < 1e-9)
+            {
+                return hinge.targetAngle;
+            }
             vectorLeft.Unitize();
             vectorRight.Unitize();
 
-            return Vector3d.VectorAngle(vectorLeft, vectorRight);
+            double angle = Vector3d.VectorAngle(vectorLeft, vectorRight);
+
+            Vector3d cross = Vector3d.CrossProduct(vectorLeft, vectorRight);
+            if (Vector3d.Multiply(cross, hinge.referenceNormal) < 0)
+            {
+                angle = 2.0 * Math.PI - angle;
+            }
+
+            return angle;
+
         }
 
-        /// <summary>
-        /// 초기 시간과 온도를 받아 물성 상태 초기 업데이트를 한 번 실행한다.
-        /// </summary>
+        public double calculateInitialHingeAngle(Hinge hinge)
+        {
+            Vector3d vectorLeft = inputVoxels[hinge.leftId].initialPoint - inputVoxels[hinge.centerId].initialPoint;
+            Vector3d vectorRight = inputVoxels[hinge.rightId].initialPoint - inputVoxels[hinge.centerId].initialPoint;
+
+            if (vectorLeft.Length < 1e-9 || vectorRight.Length < 1e-9)
+            {
+                return hinge.targetAngle;
+            }
+            vectorLeft.Unitize();
+            vectorRight.Unitize();
+
+            double angle = Vector3d.VectorAngle(vectorLeft, vectorRight);
+
+            Vector3d cross = Vector3d.CrossProduct(vectorLeft, vectorRight);
+            if (Vector3d.Multiply(cross, hinge.referenceNormal) < 0)
+            {
+                angle = 2.0 * Math.PI - angle;
+            }
+
+            return angle;
+
+        }
+
         /// <param name="time"></param>
         /// <param name="stimulus"></param>
         public void updateAllState(double time, Stimulus stimulus)
@@ -217,52 +370,83 @@ namespace Morpho4D.Solver
         /// <param name="stimulus"></param>
         public void execute(double time, Stimulus stimulus)
         {
-            this.energyHistory.Clear(); // 이번 solve의 수렴 기록 초기화
+            energyHistory.Clear();
 
-            // 1. 복셀 상태 업데이트
-            // evaluateState()            
-            this.updateAllState(time, stimulus);
-
-            // 2. 복셀들의 초기 좌표 추출하여 Vector<double>로 변환(initialGuess 생성)
-            double[] initialCoords = new double[inputVoxels.Count * 3];
-
-            for (int i = 0; i < inputVoxels.Count; i++)
+            foreach (VoxelCell v in inputVoxels)
             {
-                initialCoords[i * 3] = inputVoxels[i].currentPoint.X;
-                initialCoords[i * 3 + 1] = inputVoxels[i].currentPoint.Y;
-                initialCoords[i * 3 + 2] = inputVoxels[i].currentPoint.Z;
+                v.currentPoint = v.initialPoint;
             }
 
-            var initialGuess = MathNet.Numerics.LinearAlgebra.Vector<double>.Build.DenseOfArray(initialCoords);
+            if (time <= 0) return;
 
-            // 3. IObjectiveFunction 객체 생성
-            // -> IObjectiveFunction Gradient(Func<Vector<double>, double> function, Func<Vector<double>, Vector<double>> gradient) 메서드 사용
-            IObjectiveFunction objective = ObjectiveFunction.Gradient(x => calculateTotalEnergy(x), x => calculateTotalGradient(x));
+            int steps = 5;
 
-            // 4. LbfgsMinimizer 생성
-            // BfgsMinimizer(double gradientTolerance, double parameterTolerance, double functionProgressTolerance, int maximumIterations) 생성자 사용
-            var solver = new LimitedMemoryBfgsMinimizer(1e-5, 1e-5, 1e-5, 100);
-
-            // 5. Minimize 호출
-            // MinimizationResult FindMinimum(IObjectiveFunction objective, Vector<T> initialGuess)
-            MinimizationResult result = solver.FindMinimum(objective, initialGuess);
-
-            // 6. 최종 결과 반영
-            var resultCoords = result.MinimizingPoint;
-
+            Random rnd = new Random(42);
             for (int i = 0; i < inputVoxels.Count; i++)
             {
-                // Anchor점 계산 제외
-                if (inputVoxels[i].isFixed)
+                double noiseZ = (rnd.NextDouble() - 0.5) * 1e-5;
+                inputVoxels[i].currentPoint = new Point3d(
+                    inputVoxels[i].currentPoint.X, 
+                    inputVoxels[i].currentPoint.Y, 
+                    inputVoxels[i].currentPoint.Z + noiseZ);
+            }
+
+            for (int step = 1; step <= steps; step++)
+            {
+                // 2차 곡선 시간 쪼개기 유지 (초반 스텝의 에러 방지)
+                double ratio = (double)step / steps;
+                double currentTime = time * Math.Pow(ratio, 2.0); 
+
+                this.updateAllState(currentTime, stimulus);
+
+                double[] initialCoords = new double[inputVoxels.Count * 3];
+                for (int i = 0; i < inputVoxels.Count; i++)
                 {
-                    continue;
+                    initialCoords[i * 3] = inputVoxels[i].currentPoint.X;
+                    initialCoords[i * 3 + 1] = inputVoxels[i].currentPoint.Y;
+                    initialCoords[i * 3 + 2] = inputVoxels[i].currentPoint.Z;
                 }
 
-                double x = resultCoords[i * 3];
-                double y = resultCoords[i * 3 + 1];
-                double z = resultCoords[i * 3 + 2];
+                var initialGuess = MathNet.Numerics.LinearAlgebra.Vector<double>.Build.DenseOfArray(initialCoords);
 
-                inputVoxels[i].currentPoint = new Point3d(x, y, z);
+                MathNet.Numerics.LinearAlgebra.Vector<double> bestX = null;
+                double minEnergy = double.MaxValue;
+
+                IObjectiveFunction objective = ObjectiveFunction.Gradient(x => {
+                    double energy = calculateTotalEnergy(x);
+                    energyHistory.Add(energy);  // G8: 수렴 기록
+                    if (energy < minEnergy) {
+                        minEnergy = energy;
+                        bestX = x.Clone();
+                    }
+                    return energy;
+                }, x => calculateTotalGradient(x));
+
+                // 허용 오차를 조금 낮춰서(1e-2) 정답을 대충 찾아도 바로 넘어가게 하고, 최대 30번만 계산하게 하여 속도 대폭 향상
+                var solver = new BfgsMinimizer(1e-2, 1e-2, 1e-2, 30);
+
+                try 
+                {
+                    MinimizationResult result = solver.FindMinimum(objective, initialGuess);
+                    bestX = result.MinimizingPoint;
+                }
+                catch (Exception)
+                {
+                    // 에러 발생 시 무시하고 진행된 곳까지만 반영
+                }
+
+                var resultCoords = bestX ?? initialGuess;
+
+                for (int i = 0; i < inputVoxels.Count; i++)
+                {
+                    if (inputVoxels[i].isFixed) continue;
+
+                    double x = resultCoords[i * 3];
+                    double y = resultCoords[i * 3 + 1];
+                    double z = resultCoords[i * 3 + 2];
+
+                    inputVoxels[i].currentPoint = new Point3d(x, y, z);
+                }
             }
         }
 
@@ -277,6 +461,7 @@ namespace Morpho4D.Solver
 
             for (int i = 0; i < inputVoxels.Count; i++)
             {
+                if (inputVoxels[i].isFixed) continue;
                 inputVoxels[i].currentPoint = new Point3d(x[i * 3], x[i * 3 + 1], x[i * 3 + 2]);
             }
 
@@ -290,16 +475,15 @@ namespace Morpho4D.Solver
                 totalEnergy += getBendingEnergy(h);
             }
 
-            // 외부 하중 포텐셜 에너지 E_ext = -F·x (LoadApplicator로 주입된 voxel.appliedLoad)
-            for (int i = 0; i < inputVoxels.Count; i++)
+            // G8: 외부 하중 포텐셜 에너지 -F·x
+            foreach (var v in inputVoxels)
             {
-                Vector3d f = inputVoxels[i].appliedLoad;
-                if (f.IsZero) continue;
-                Point3d p = inputVoxels[i].currentPoint;
-                totalEnergy += -(f.X * p.X + f.Y * p.Y + f.Z * p.Z);
+                if (v.isFixed) continue;
+                totalEnergy -= v.appliedLoad.X * v.currentPoint.X
+                             + v.appliedLoad.Y * v.currentPoint.Y
+                             + v.appliedLoad.Z * v.currentPoint.Z;
             }
 
-            this.energyHistory.Add(totalEnergy); // 수렴 모니터링용 기록
             return totalEnergy;
         }
 
@@ -314,6 +498,7 @@ namespace Morpho4D.Solver
 
             for (int i = 0; i < inputVoxels.Count; i++)
             {
+                if (inputVoxels[i].isFixed) continue;
                 inputVoxels[i].currentPoint = new Point3d(x[i * 3], x[i * 3 + 1], x[i * 3 + 2]);
             }
 
@@ -332,11 +517,13 @@ namespace Morpho4D.Solver
                 accumulateForce(gradients, h.rightId, forces[2]);
             }
 
-            // 외부 하중: 물리적 힘 +F를 누적 (gradients는 물리력 = -dE/dx, 마지막에 -1 곱하면 dE_ext/dx = -F)
-            for (int i = 0; i < inputVoxels.Count; i++)
+            // G8: 외부 하중 gradient (∂(-F·x)/∂x = -F, 하중 방향으로 gradient 누적)
+            foreach (var v in inputVoxels)
             {
-                Vector3d f = inputVoxels[i].appliedLoad;
-                if (!f.IsZero) accumulateForce(gradients, i, f);
+                if (v.isFixed) continue;
+                gradients[v.Id * 3]     -= v.appliedLoad.X;
+                gradients[v.Id * 3 + 1] -= v.appliedLoad.Y;
+                gradients[v.Id * 3 + 2] -= v.appliedLoad.Z;
             }
 
             for (int i = 0; i < inputVoxels.Count; i++)
@@ -362,18 +549,30 @@ namespace Morpho4D.Solver
         /// <summary>
         /// calculateTotalEnergy() 내부에서 실행됨
         /// </summary>
-        /// <param name="a"></param>
-        /// <param name="b"></param>
+        /// <param name="pair"></param>
         /// <returns></returns>
         private double getSpringEnergy(VoxelPair pair)
         {
-            double currentDist = inputVoxels[pair.idA].currentPoint.DistanceTo(inputVoxels[pair.idB].currentPoint);
+            VoxelCell va = inputVoxels[pair.idA];
+            VoxelCell vb = inputVoxels[pair.idB];
+            double currentDist = va.currentPoint.DistanceTo(vb.currentPoint);
             double initialDist = pair.pairLength;
-            // [P0-2] 대칭 처리: 양 끝점 팽창의 평균을 rest length에 반영 (idA만 쓰면 순서 의존 -> bilayer 굽힘이 비대칭/오류)
-            double avgExpansion = (inputVoxels[pair.idA].expansionForce + inputVoxels[pair.idB].expansionForce) * 0.5;
-            double targetDist = initialDist * avgExpansion;
+            if (initialDist < 1e-9) return 0.0;
 
-            double k = (inputVoxels[pair.idA].currentYoungsModulus + inputVoxels[pair.idB].currentYoungsModulus) * 0.5;
+            double avgExpansion = (va.expansionForce + vb.expansionForce) * 0.5;
+
+            // G1: 비등방 eigenstrain 항 추가
+            Vector3d pairDir = vb.initialPoint - va.initialPoint;
+            if (pairDir.Length > 1e-9) pairDir.Unitize();
+            double aniso = 0.0;
+            if (va.isActive) { double d = pairDir * va.fiberDir; aniso += 0.5 * va.epsMax * va.activationFraction * d * d; }
+            if (vb.isActive) { double d = pairDir * vb.fiberDir; aniso += 0.5 * vb.epsMax * vb.activationFraction * d * d; }
+
+            double targetDist = initialDist * (avgExpansion + aniso);
+
+            double E = (va.currentYoungsModulus + vb.currentYoungsModulus) * 0.5;
+            double s = va.voxelSize;
+            double k = (E * s * s) / initialDist;
 
             return 0.5 * k * Math.Pow(currentDist - targetDist, 2);
         }
@@ -386,8 +585,11 @@ namespace Morpho4D.Solver
         private double getBendingEnergy(Hinge hinge)
         {
             double currentAngle = this.calculateHingeAngle(hinge);
-            double targetAngle = hinge.targetAngle;
-            double k = inputVoxels[hinge.centerId].currentYoungsModulus;
+
+            double E = inputVoxels[hinge.centerId].currentYoungsModulus;
+            double s = inputVoxels[hinge.centerId].voxelSize;
+            // 굽힘 강성에 /12.0 추가 (실제 단면2차모멘트 I = s^4/12 물리 공식 반영. 너무 뻣뻣해서 안 휘어지는 현상 해결)
+            double k = E * Math.Pow(s, 3) / 12.0;
 
             return 0.5 * k * Math.Pow(currentAngle - hinge.targetAngle, 2);
         }
@@ -399,18 +601,34 @@ namespace Morpho4D.Solver
         /// <returns></returns>
         private Vector3d getSpringForce(VoxelPair pair)
         {
-            Vector3d dir = inputVoxels[pair.idB].currentPoint - inputVoxels[pair.idA].currentPoint;
+            VoxelCell va = inputVoxels[pair.idA];
+            VoxelCell vb = inputVoxels[pair.idB];
+            Vector3d dir = vb.currentPoint - va.currentPoint;
             double currentDist = dir.Length;
 
             if (currentDist < 1e-9)
-                return new Vector3d(0, 0, 0);
+            {
+                dir = vb.initialPoint - va.initialPoint;
+                currentDist = 0.0;
+            }
 
             double initialDist = pair.pairLength;
-            // [P0-2] 대칭 처리 (getSpringEnergy와 동일해야 gradient 일관성 유지)
-            double avgExpansion = (inputVoxels[pair.idA].expansionForce + inputVoxels[pair.idB].expansionForce) * 0.5;
-            double targetDist = initialDist * avgExpansion;
+            if (initialDist < 1e-9) return new Vector3d(0, 0, 0);
 
-            double k = (inputVoxels[pair.idA].currentYoungsModulus + inputVoxels[pair.idB].currentYoungsModulus) * 0.5;
+            double avgExpansion = (va.expansionForce + vb.expansionForce) * 0.5;
+
+            // G1: getSpringEnergy와 동일한 targetDist 수식 (gradient 일관성)
+            Vector3d pairDir = vb.initialPoint - va.initialPoint;
+            if (pairDir.Length > 1e-9) pairDir.Unitize();
+            double aniso = 0.0;
+            if (va.isActive) { double d = pairDir * va.fiberDir; aniso += 0.5 * va.epsMax * va.activationFraction * d * d; }
+            if (vb.isActive) { double d = pairDir * vb.fiberDir; aniso += 0.5 * vb.epsMax * vb.activationFraction * d * d; }
+
+            double targetDist = initialDist * (avgExpansion + aniso);
+
+            double E = (va.currentYoungsModulus + vb.currentYoungsModulus) * 0.5;
+            double s = va.voxelSize;
+            double k = (E * s * s) / initialDist;
 
             double forceMagnitude = k * (currentDist - targetDist);
 
@@ -437,14 +655,28 @@ namespace Morpho4D.Solver
             if (lenLeft < 1e-9 || lenRight < 1e-9)
                 return new Vector3d[3];
 
-            double currentAngle = Vector3d.VectorAngle(vectorLeft, vectorRight);
+            double currentAngle = this.calculateHingeAngle(hinge);
             double targetAngle = hinge.targetAngle;
-            double k = inputVoxels[hinge.centerId].currentYoungsModulus;
+
+            double E = inputVoxels[hinge.centerId].currentYoungsModulus;
+            double s = inputVoxels[hinge.centerId].voxelSize;
+            double k = E * Math.Pow(s, 3) / 12.0;  // G-1 fix: energy와 force에서 동일한 k 사용
+
             double torqueMag = k * (currentAngle - targetAngle);
 
             Vector3d normal = Vector3d.CrossProduct(vectorLeft, vectorRight);
-            if (normal.Length < 1e-9)
-                return new Vector3d[3];
+            if (normal.Length < 1e-4)
+            {
+                normal = hinge.referenceNormal;
+            }
+            else
+            {
+                normal.Unitize();
+                if (Vector3d.Multiply(normal, hinge.referenceNormal) < 0)
+                {
+                    normal = -normal;
+                }
+            }
 
             Vector3d dirLeft = Vector3d.CrossProduct(normal, vectorLeft);
             Vector3d dirRight = Vector3d.CrossProduct(vectorRight, normal);
@@ -457,6 +689,12 @@ namespace Morpho4D.Solver
 
             return new Vector3d[] { forceLeft, forceCenter, forceRight };
         }
+
+        /// <summary> [테스트 전용] calculateTotalEnergy의 public 래퍼. GradientCheck에서만 사용. </summary>
+        public double DebugTotalEnergy(MathNet.Numerics.LinearAlgebra.Vector<double> x) => calculateTotalEnergy(x);
+
+        /// <summary> [테스트 전용] calculateTotalGradient의 public 래퍼. GradientCheck에서만 사용. </summary>
+        public MathNet.Numerics.LinearAlgebra.Vector<double> DebugTotalGradient(MathNet.Numerics.LinearAlgebra.Vector<double> x) => calculateTotalGradient(x);
 
         /// <summary>
         /// 최종 시뮬레이션 점 리스트 추출

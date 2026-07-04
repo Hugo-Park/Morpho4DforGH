@@ -33,7 +33,7 @@ namespace _Morpho4D
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
             pManager.AddGenericParameter("Stimulus", "S", "Constructed Stimulus object", GH_ParamAccess.item);
-            pManager.AddTextParameter("Inspection", "?", "Inspection of SMP", GH_ParamAccess.list);
+            pManager.AddTextParameter("Inspection", "?", "Inspection of Stimulus", GH_ParamAccess.list);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)

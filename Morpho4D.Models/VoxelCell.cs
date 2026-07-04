@@ -38,7 +38,14 @@ namespace Morpho4D.Models
         /*Solver 연산용 데이터*/
         public Vector3d gradient { get; set; }
 
-        /*외부 하중 (LoadApplicator 유틸리티가 주입) - 기본값 0, 솔버 포텐셜 에너지에 E_ext = -F·x 로 반영됨*/
+        /*eigenstrain 비등방 활성변형 (G1)*/
+        public Vector3d fiberDir { get; set; } = Vector3d.XAxis;
+        public double epsMax { get; set; } = 0.0;
+        public double activationFraction { get; set; } = 0.0;
+        public bool isActive { get; set; } = false;
+        public bool isGridVoxel { get; set; } = true;
+
+        /*부가 유틸리티 (G8)*/
         public Vector3d appliedLoad { get; set; } = Vector3d.Zero;
 
         public VoxelCell(int id, Point3d position)
@@ -68,9 +75,11 @@ namespace Morpho4D.Models
 
             Mesh[] meshes = Mesh.CreateFromBrep(inputBrep, mParams);
             if (meshes == null || meshes.Length == 0) return new List<VoxelCell>();
-            
+
             Mesh combinedMesh = new Mesh();
             foreach (Mesh m in meshes) combinedMesh.Append(m);
+            combinedMesh.Vertices.CombineIdentical(true, true);
+            combinedMesh.Weld(0.1);
 
             List<VoxelCell> result = new List<VoxelCell>();
 
@@ -79,11 +88,25 @@ namespace Morpho4D.Models
                 Point3d voxelPos = new Point3d(combinedMesh.Vertices[i]);
                 VoxelCell newCell = new VoxelCell(i, voxelPos);
                 newCell.voxelSize = size;
+
+                Point3d closestPoint;
+                Rhino.Geometry.ComponentIndex ci;
+                double s, t;
+                Vector3d normal;
+
+                if (inputBrep.ClosestPoint(voxelPos, out closestPoint, out ci, out s, out t, 0.0, out normal))
+                {
+                    newCell.distanceFromSurface = voxelPos.DistanceTo(closestPoint);
+                }
+                else
+                {
+                    newCell.distanceFromSurface = 0.0;
+                }
                 result.Add(newCell);
             }
 
             return result;
-            
+
             /*
             List<VoxelCell> result = new List<VoxelCell>();
             BoundingBox bbox = inputBrep.GetBoundingBox(true);

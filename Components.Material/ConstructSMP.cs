@@ -50,7 +50,7 @@ namespace _Morpho4D
             statList.Add(string.Format("Material Name: {0}", mBase.materialName));
             statList.Add(string.Format("Preview Color: {0}", mBase.previewColor));
             statList.Add(string.Format("Young's Modulus: {0}", mBase.youngsModulus));
-            statList.Add(string.Format("Poisson's Ratio: {0}", mBase.materialName));
+            statList.Add(string.Format("Poisson's Ratio: {0}", mBase.poissonRatio));
             statList.Add(string.Format("Max Swelling Ratio: {0}", maxS));
             statList.Add(string.Format("Min Swelling Ratio: {0}", minS));
             statList.Add(string.Format("Glass Transition Temperature: {0}", model.Tg));

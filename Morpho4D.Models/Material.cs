@@ -69,26 +69,19 @@ namespace Morpho4D.Models
         }
         public override void evaluateState(MorphoSolver solver, VoxelCell voxel, Stimulus stimulus, double t)
         {
-            double temp = stimulus.TemperatureAt(voxel); // 공간 자극 필드 지원 (없으면 scalar temperature)
+            double temp = stimulus.temperature;
             voxel.currentTemp = temp;
-            voxel.currentYoungsModulus = calculateSigmoid(temp);
-            voxel.expansionForce = 1;
 
-            /*타깃 곡률 로직*/
-            if (temp >= this.glassTransTemp) // 유리전이온도보다 낮으면 고정
-            {
-                voxel.currentYoungsModulus = 0.01;
-                foreach (Hinge h in voxel.hingeIndices)
-                {
-                    h.targetAngle = solver.calculateHingeAngle(h);
-                }
-            }
+            double currentE = calculateSigmoid(temp);
+            voxel.currentYoungsModulus = currentE;  // G1: 0.01 덮어쓰기 완전 제거
 
-            else
-            {
-                // 유리전이온도 미만이므로 형상 고정 상태
-                // (empty)
-            }       
+            // activationFraction: (Eg - E(T)) / (Eg - Er) — 온도 상승 시 1→0
+            double denom = this.glassyModulus - this.rubberyModulus;
+            double frac = (Math.Abs(denom) < 1e-9) ? 0.0 : (this.glassyModulus - currentE) / denom;
+            voxel.activationFraction = Math.Max(0.0, Math.Min(1.0, frac));
+
+            voxel.expansionForce = 1.0;
+            // G1: hinge targetAngle 고정 로직 완전 제거
         }
 
         /*생성자*/
@@ -161,17 +154,21 @@ namespace Morpho4D.Models
         public override void evaluateState(MorphoSolver solver, VoxelCell voxel, Stimulus stimulus, double t)
         {
             voxel.currentTemp = 25.0;
+            double tolerance = 1e-4;
 
-            double x = (voxel.distanceFromSurface <= 0) ? (voxel.voxelSize * 0.5) : voxel.distanceFromSurface;
+            double x = (voxel.distanceFromSurface <= tolerance) ? (voxel.voxelSize * 0.5) : voxel.distanceFromSurface;
             double hydration = calculateAnalyticalDiffusion(x, t, this.diffusionCoefficient, this.saturationLimit);
             voxel.currentHydration = hydration;
             voxel.expansionForce = 1.0 + (hydration * (this.maxSwellingRatio - 1.0));
             voxel.currentYoungsModulus = this.materialBase.youngsModulus;
+            voxel.activationFraction = 0.0;
 
+            /*
             foreach(Hinge h in voxel.hingeIndices)
             {
                 h.targetAngle = Math.PI; // Hydrogel은 복셀간 거리 변화만 존재, 곡률 변화 없음
             }
+            */
         }
 
         /*생성자*/
@@ -201,6 +198,23 @@ namespace Morpho4D.Models
             this.D = d;
             this.HMax = hmax;
             this.Cs = cs;
+        }
+    }
+
+    public class PassiveMat : Material
+    {
+        public double thermalSoftening { get; set; } = 0.0;
+        public override void evaluateState(MorphoSolver solver, VoxelCell voxel, Stimulus stimulus, double t)
+        {
+            voxel.currentTemp = stimulus.temperature;
+            voxel.expansionForce = 1.0;
+            voxel.activationFraction = 0.0;
+            double drop = thermalSoftening * Math.Max(0.0, stimulus.temperature - 25.0);
+            voxel.currentYoungsModulus = Math.Max(0.01, this.materialBase.youngsModulus - drop);
+        }
+        public PassiveMat(MaterialBase mBase, double thermalSoftening = 0.0) : base(mBase)
+        {
+            this.thermalSoftening = thermalSoftening;
         }
     }
 }
