@@ -16,7 +16,7 @@ namespace _Morpho4D
         public BrepToVoxel()
           : base("Brep to Voxel", "B/V",
             "Convert Brep objects to Voxels",
-            "Morpho4D", "Voxel")
+            "Morpho4D", "01 Voxel")
         {
         }
 
@@ -107,7 +107,7 @@ namespace _Morpho4D
                 args.Display.DrawBrepWires(previewBrep, previewMat.getPreviewColor(), -1);
             }
         }
-        protected override System.Drawing.Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => IconLoader.Get("BrepToVoxel");
 
         public override Guid ComponentGuid => new Guid("01df7804-29cd-4520-98df-a2d2e6835585");
     }

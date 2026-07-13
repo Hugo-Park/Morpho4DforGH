@@ -14,7 +14,7 @@ namespace _Morpho4D
         public ConstructHydrogel()
           : base("Construct Hydrogel", "Hydrogel",
             "Create hydrogel material by defining variables",
-            "Morpho4D", "Material")
+            "Morpho4D", "02 Material")
         {
         }
 
@@ -65,7 +65,7 @@ namespace _Morpho4D
             DA.SetDataList(1, statList);
         }
 
-        protected override System.Drawing.Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => IconLoader.Get("ConstructHydrogel");
 
         public override Guid ComponentGuid => new Guid("7B47BC4F-C0A1-4CA7-A864-C2EA168B50EE");
     }

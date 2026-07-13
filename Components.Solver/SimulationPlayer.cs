@@ -9,8 +9,8 @@ using Rhino.Geometry;
 namespace _Morpho4D
 {
     /// <summary>
-    /// 여러 타임스텝의 시뮬레이션을 실행하고 프레임 캐시를 관리한다.
-    /// BuildDeformedBoxMesh(G0)를 재사용해 각 프레임의 메쉬를 생성.
+    /// Executes simulations for multiple time steps and manages the frame cache.
+    /// Reuses BuildDeformedBoxMesh(G0) to create a mesh for each frame.
     /// </summary>
     public class SimulationPlayerComponent : GH_Component
     {
@@ -19,24 +19,25 @@ namespace _Morpho4D
 
         public SimulationPlayerComponent()
           : base("Simulation Player", "SimPlay",
-              "타임스텝별 시뮬레이션 결과를 캐시하고 재생한다. SimulationTimer와 연결.",
-              "Morpho4D", "Utility")
+              "Caches and plays back simulation results per time step. Connects to SimulationTimer.",
+              "Morpho4D", "04 Solver")
         {
         }
 
         protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
-            pManager.AddGenericParameter("Voxels", "VX", "BilayerMaterial + SetFiberDirection 완료 복셀", GH_ParamAccess.list);
-            pManager.AddGenericParameter("Stimulus", "S", "자극 객체", GH_ParamAccess.item);
-            pManager.AddNumberParameter("Time", "T", "현재 시간 (SimulationTimer 출력)", GH_ParamAccess.item, 0.0);
-            pManager.AddBooleanParameter("Clear Cache", "C", "true이면 캐시 초기화", GH_ParamAccess.item, false);
+            pManager.AddGenericParameter("Voxels", "VX", "Completed voxels with BilayerMaterial + SetFiberDirection", GH_ParamAccess.list);
+            pManager.AddGenericParameter("Stimulus", "S", "Stimulus object", GH_ParamAccess.item);
+            pManager.AddNumberParameter("Time", "T", "Current time (SimulationTimer output)", GH_ParamAccess.item, 0.0);
+            pManager.AddBooleanParameter("Clear Cache", "C", "If true, clears the cache", GH_ParamAccess.item, false);
         }
 
         protected override void RegisterOutputParams(GH_OutputParamManager pManager)
         {
-            pManager.AddMeshParameter("Frame Mesh", "M", "현재 프레임의 변형 메쉬", GH_ParamAccess.item);
-            pManager.AddPointParameter("Frame Points", "P", "현재 프레임의 복셀 중심점", GH_ParamAccess.list);
-            pManager.AddIntegerParameter("Cached Frames", "nC", "캐시된 프레임 수", GH_ParamAccess.item);
+            pManager.AddMeshParameter("Frame Mesh", "M", "Deformed mesh of the current frame", GH_ParamAccess.item);
+            pManager.AddPointParameter("Frame Points", "P", "Voxel center points of the current frame", GH_ParamAccess.list);
+            pManager.AddIntegerParameter("Cached Frames", "nC", "Number of cached frames", GH_ParamAccess.item);
+            pManager.AddGenericParameter("Voxels", "VX", "Deformed Voxels", GH_ParamAccess.list);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
@@ -57,11 +58,11 @@ namespace _Morpho4D
             foreach (var g in voxelGoos) if (g?.Value != null) voxels.Add(g.Value);
             if (voxels.Count == 0) return;
 
-            // 시간을 100단위로 양자화해 캐시 키 생성
+            // Quantize time to 100 units to create a cache key
             int cacheKey = (int)(time * 100);
             if (!_cache.ContainsKey(cacheKey))
             {
-                // 복셀 상태 초기화 후 시뮬레이션
+                // Simulate after initializing voxel states
                 foreach (var v in voxels) v.currentPoint = v.initialPoint;
                 var solver = new MorphoSolver(voxels);
                 solver.setUpFromGrid(voxels);
@@ -76,6 +77,7 @@ namespace _Morpho4D
             DA.SetData(0, frameMesh);
             DA.SetDataList(1, pts);
             DA.SetData(2, _cache.Count);
+            DA.SetDataList(3, voxelGoos);
         }
 
         private Mesh BuildDeformedBoxMesh(List<VoxelCell> voxels, List<Point3d> resultPoints)
@@ -97,7 +99,7 @@ namespace _Morpho4D
             return result;
         }
 
-        protected override Bitmap Icon => null;
-        public override Guid ComponentGuid => new Guid("AAAAAAA5-1111-2222-3333-444444444444");
+        protected override Bitmap Icon => IconLoader.Get("SimulationPlayer");
+        public override Guid ComponentGuid => new Guid("8519efd0-7634-41bc-843d-84bf4d7a33d4");
     }
 }

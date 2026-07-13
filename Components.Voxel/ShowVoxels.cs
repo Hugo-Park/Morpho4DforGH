@@ -14,7 +14,7 @@ namespace _Morpho4D
         public ShowVoxels()
           : base("Show Voxels", "sVX",
             "Show converted Voxels",
-            "Morpho4D", "Voxel")
+            "Morpho4D", "01 Voxel")
         {
         }
 
@@ -72,7 +72,7 @@ namespace _Morpho4D
             args.Display.DrawMeshShaded(visualMesh, prevColor);
         }
 
-        protected override System.Drawing.Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => IconLoader.Get("ShowVoxels");
 
         public override Guid ComponentGuid => new Guid("7C721802-72FB-4BCE-B06E-B3BBAE441DA8");
     }

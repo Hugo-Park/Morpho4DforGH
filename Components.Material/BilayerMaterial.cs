@@ -11,27 +11,27 @@ namespace _Morpho4D
     {
         public BilayerMaterialComponent()
           : base("Bilayer Material", "Bilayer",
-              "복셀 리스트를 평면으로 분할해 상단=active(SMP), 하단=passive(PLA) 재료를 지정한다.",
-              "Morpho4D", "Material")
+              "Splits the voxel list by a plane to assign top=active(SMP) and bottom=passive(PLA) materials.",
+              "Morpho4D", "02 Material")
         {
         }
 
         protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
-            pManager.AddGenericParameter("Voxels", "VX", "입력 복셀 리스트", GH_ParamAccess.list);
-            pManager.AddGenericParameter("Active Material", "AM", "상단(active) 재료 — SmpMat 권장", GH_ParamAccess.item);
-            pManager.AddGenericParameter("Passive Material", "PM", "하단(passive) 재료 — PassiveMat(PLA) 권장", GH_ParamAccess.item);
+            pManager.AddGenericParameter("Voxels", "VX", "Input voxel list", GH_ParamAccess.list);
+            pManager.AddGenericParameter("Active Material", "AM", "Top (active) material - SmpMat recommended", GH_ParamAccess.item);
+            pManager.AddGenericParameter("Passive Material", "PM", "Bottom (passive) material - PassiveMat(PLA) recommended", GH_ParamAccess.item);
             pManager.AddPlaneParameter("Split Plane", "P",
-                "분할 평면. 이 평면보다 법선 방향 위가 active. 미입력 시 Z 중앙으로 자동 설정(AutoCenter).",
+                "Split plane. Above this plane in the normal direction is active. Auto-set to Z center if unset (AutoCenter).",
                 GH_ParamAccess.item);
             pManager[3].Optional = true;
         }
 
         protected override void RegisterOutputParams(GH_OutputParamManager pManager)
         {
-            pManager.AddGenericParameter("Voxels", "VX", "재료가 지정된 복셀 리스트", GH_ParamAccess.list);
-            pManager.AddIntegerParameter("Active Count", "nA", "active 복셀 수", GH_ParamAccess.item);
-            pManager.AddIntegerParameter("Passive Count", "nP", "passive 복셀 수", GH_ParamAccess.item);
+            pManager.AddGenericParameter("Voxels", "VX", "Voxel list with materials assigned", GH_ParamAccess.list);
+            pManager.AddIntegerParameter("Active Count", "nA", "Active voxel count", GH_ParamAccess.item);
+            pManager.AddIntegerParameter("Passive Count", "nP", "Passive voxel count", GH_ParamAccess.item);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
@@ -56,7 +56,7 @@ namespace _Morpho4D
                 this.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning,
                     "BilayerMaterial expects volumetric voxels (default in this base).");
 
-            // AutoCenter: 지정 평면 없으면 Z 중앙 분할
+            // AutoCenter: Auto-set to Z center if no plane is specified
             if (splitPlane == Plane.Unset)
             {
                 double zMin = double.MaxValue, zMax = double.MinValue;
@@ -95,7 +95,7 @@ namespace _Morpho4D
             DA.SetData(2, nP);
         }
 
-        protected override Bitmap Icon => null;
-        public override Guid ComponentGuid => new Guid("22222222-3333-4444-5555-666666666666");
+        protected override Bitmap Icon => IconLoader.Get("BilayerMaterial");
+        public override Guid ComponentGuid => new Guid("1bf4606b-2bf4-4b2d-9057-6f13c79411f7");
     }
 }

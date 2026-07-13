@@ -12,7 +12,7 @@ namespace _Morpho4D
         public FahrenheitToCelsius()
           : base("\u00B0F to \u00B0C", "F-C",
             "Description of component",
-            "Morpho4D", "Utility")
+            "Morpho4D", "08 Utility")
         {
         }
 
@@ -37,7 +37,7 @@ namespace _Morpho4D
             DA.SetData(0, Math.Round(selTemp, 2));
         }
 
-        protected override System.Drawing.Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => IconLoader.Get("FahrenheitToCelsius");
 
         public override Guid ComponentGuid => new Guid("6ABC5074-64ED-4F9C-A630-65D7B1629E24");
     }

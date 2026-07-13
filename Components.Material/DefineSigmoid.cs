@@ -13,7 +13,7 @@ namespace _Morpho4D
         public DefineSigmoid()
           : base("Define Sigmoid", "SM",
             "Calculate Young's modulus using a sigmoid-based transition model.",
-            "Morpho4D", "Material")
+            "Morpho4D", "02 Material")
         {
         }
 
@@ -46,7 +46,7 @@ namespace _Morpho4D
             DA.SetData(0, model);
         }
 
-        protected override System.Drawing.Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => IconLoader.Get("DefineSigmoid");
 
         public override Guid ComponentGuid => new Guid("8d29bc3b-2930-4b46-8112-63bc499a8d26");
     }

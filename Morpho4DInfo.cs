@@ -10,7 +10,7 @@ namespace _Morpho4D
     public override string Name => "Morpho4D Info";
 
     //Return a 24x24 pixel bitmap to represent this GHA library.
-    public override Bitmap Icon => null;
+    public override Bitmap Icon => IconLoader.Get("Morpho4DInfo");
 
     //Return a short string describing the purpose of this GHA library.
     public override string Description => "This is 4D printing simulator for Grasshopper3D";

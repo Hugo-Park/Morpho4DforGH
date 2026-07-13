@@ -15,7 +15,7 @@ namespace _Morpho4D
         public Anchor()
           : base("Anchor", "A",
             "Assigns an 'isFixed' state to specific voxels. Fixed voxels act as rigid anchors that do not move during the simulation process, allowing the rest of the structure to morph or bend around them.",
-            "Morpho4D", "Solver")
+            "Morpho4D", "04 Solver")
         {
         }
 
@@ -67,7 +67,7 @@ namespace _Morpho4D
             DA.SetDataList(0, voxelGoos);
         }
 
-        protected override System.Drawing.Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => IconLoader.Get("Anchor");
 
         public override Guid ComponentGuid => new Guid("a094b042-81a4-44bd-88f0-6f093ae56328");
     }

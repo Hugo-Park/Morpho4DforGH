@@ -14,7 +14,7 @@ namespace _Morpho4D
         public VoxelPicker()
           : base("Voxel Picker", "vxPick",
             "Pick and Retrive a Specific Voxel from a List by its Unique ID for Detailed Inspection",
-            "Morpho4D", "Voxel")
+            "Morpho4D", "01 Voxel")
         {
         }
 
@@ -51,7 +51,7 @@ namespace _Morpho4D
             DA.SetDataList(1, statList);
         }
 
-        protected override System.Drawing.Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => IconLoader.Get("VoxelPicker");
 
         public override Guid ComponentGuid => new Guid("20B11023-DA29-4A23-8803-C6D4AF86F7CE");
     }

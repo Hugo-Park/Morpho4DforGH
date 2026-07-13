@@ -13,7 +13,7 @@ namespace _Morpho4D
         public ConstructSMP()
           : base("Construct SMP", "SMP",
             "Create SMP material by defining variables",
-            "Morpho4D", "Material")
+            "Morpho4D", "02 Material")
         {
         }
 
@@ -62,7 +62,7 @@ namespace _Morpho4D
             DA.SetDataList(1, statList);
         }
 
-        protected override System.Drawing.Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => IconLoader.Get("ConstructSMP");
 
         public override Guid ComponentGuid => new Guid("E471F8AC-99A8-4D56-9FC1-F6F0A7F3F34C");
     }

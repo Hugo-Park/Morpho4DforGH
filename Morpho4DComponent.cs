@@ -52,7 +52,7 @@ namespace _Morpho4D
     /// You can add image files to your project resources and access them like this:
     /// return Resources.IconForThisComponent;
     /// </summary>
-    protected override System.Drawing.Bitmap Icon => null;
+    protected override System.Drawing.Bitmap Icon => IconLoader.Get("Morpho4DComponent");
 
     /// <summary>
     /// Each component must have a unique Guid to identify it. 

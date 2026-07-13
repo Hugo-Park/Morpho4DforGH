@@ -13,7 +13,7 @@ namespace _Morpho4D
         public MaterialBaseComponent()
           : base("Material Base", "mB",
             "Define material's basic informations before creating specific materials",
-            "Morpho4D", "Material")
+            "Morpho4D", "02 Material")
         {
         }
 
@@ -47,7 +47,7 @@ namespace _Morpho4D
             DA.SetData(0, materialBase);
         }
 
-        protected override System.Drawing.Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => IconLoader.Get("MaterialBaseComponent");
 
         public override Guid ComponentGuid => new Guid("4D9A74AE-1EDE-4098-BD0C-D3AD512706F0");
     }

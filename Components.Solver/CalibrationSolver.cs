@@ -12,29 +12,29 @@ namespace _Morpho4D
     {
         public CalibrationSolverComponent()
           : base("Calibration Solver", "Calib",
-              "실측 곡률(κ*)로부터 epsMax를 역산한다. Golden-Section Search 사용.",
-              "Morpho4D", "Analysis")
+              "Calculates epsMax backward from measured curvature (κ*). Uses Golden-Section Search.",
+              "Morpho4D", "04 Solver")
         {
         }
 
         protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
-            pManager.AddGenericParameter("Voxels", "VX", "BilayerMaterial + SetFiberDirection이 완료된 복셀 리스트", GH_ParamAccess.list);
-            pManager.AddGenericParameter("Stimulus", "S", "시뮬레이션에 사용할 자극 객체", GH_ParamAccess.item);
-            pManager.AddNumberParameter("Target Curvature κ*", "κ*", "실측 곡률 (1/mm)", GH_ParamAccess.item, 0.02);
-            pManager.AddNumberParameter("Time", "T", "시뮬레이션 시간", GH_ParamAccess.item, 1.0);
-            pManager.AddNumberParameter("Eps Search Min", "eMin", "epsMax 탐색 범위 하한", GH_ParamAccess.item, -0.2);
-            pManager.AddNumberParameter("Eps Search Max", "eMax", "epsMax 탐색 범위 상한", GH_ParamAccess.item, 0.2);
-            pManager.AddIntegerParameter("Max Iterations", "N", "Golden-Section 최대 반복 수", GH_ParamAccess.item, 50);
-            pManager.AddBooleanParameter("Run", "Run", "true로 설정하면 최적화 실행", GH_ParamAccess.item, false);
+            pManager.AddGenericParameter("Voxels", "VX", "List of voxels where BilayerMaterial + SetFiberDirection are completed", GH_ParamAccess.list);
+            pManager.AddGenericParameter("Stimulus", "S", "Stimulus object to be used in simulation", GH_ParamAccess.item);
+            pManager.AddNumberParameter("Target Curvature κ*", "κ*", "Measured curvature (1/mm)", GH_ParamAccess.item, 0.02);
+            pManager.AddNumberParameter("Time", "T", "Simulation time", GH_ParamAccess.item, 1.0);
+            pManager.AddNumberParameter("Eps Search Min", "eMin", "Lower bound of epsMax search range", GH_ParamAccess.item, -0.2);
+            pManager.AddNumberParameter("Eps Search Max", "eMax", "Upper bound of epsMax search range", GH_ParamAccess.item, 0.2);
+            pManager.AddIntegerParameter("Max Iterations", "N", "Maximum number of Golden-Section iterations", GH_ParamAccess.item, 50);
+            pManager.AddBooleanParameter("Run", "Run", "Execute optimization if set to true", GH_ParamAccess.item, false);
         }
 
         protected override void RegisterOutputParams(GH_OutputParamManager pManager)
         {
-            pManager.AddNumberParameter("Optimal epsMax", "ε*", "역산된 최대 eigenstrain", GH_ParamAccess.item);
-            pManager.AddNumberParameter("Simulated κ", "κ_sim", "최적 epsMax로 시뮬레이션한 곡률", GH_ParamAccess.item);
-            pManager.AddNumberParameter("Error %", "Err%", "κ* 대비 오차 (%)", GH_ParamAccess.item);
-            pManager.AddIntegerParameter("Iterations Used", "N", "실제 반복 횟수", GH_ParamAccess.item);
+            pManager.AddNumberParameter("Optimal epsMax", "ε*", "Calculated maximum eigenstrain", GH_ParamAccess.item);
+            pManager.AddNumberParameter("Simulated κ", "κ_sim", "Curvature simulated with optimal epsMax", GH_ParamAccess.item);
+            pManager.AddNumberParameter("Error %", "Err%", "Error relative to κ* (%)", GH_ParamAccess.item);
+            pManager.AddIntegerParameter("Iterations Used", "N", "Actual number of iterations used", GH_ParamAccess.item);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
@@ -62,7 +62,7 @@ namespace _Morpho4D
 
             var voxels = new List<VoxelCell>();
             foreach (var g in voxelGoos) if (g?.Value != null) voxels.Add(g.Value);
-            if (voxels.Count < 3) { AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "복셀이 3개 미만입니다."); return; }
+            if (voxels.Count < 3) { AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Less than 3 voxels."); return; }
 
             // Golden-Section Search
             double phi = (Math.Sqrt(5) - 1) / 2.0;
@@ -109,11 +109,11 @@ namespace _Morpho4D
 
         private double SimulateAndMeasure(List<VoxelCell> voxels, Stimulus stim, double time, double epsMax)
         {
-            // epsMax를 active 복셀에 임시 적용
+            // Apply epsMax temporarily to active voxels
             foreach (var v in voxels)
                 if (v.isActive) v.epsMax = epsMax;
 
-            // 복셀 상태 초기화
+            // Initialize voxel state
             foreach (var v in voxels)
                 v.currentPoint = v.initialPoint;
 
@@ -121,7 +121,7 @@ namespace _Morpho4D
             solver.setUpFromGrid(voxels);
             solver.execute(time, stim);
 
-            // 곡률 측정: X 방향으로 정렬 후 3점 원 피팅
+            // Measure curvature: Sort in X direction and fit a 3-point circle
             var pts = solver.getResultPoints();
             if (pts.Count < 3) return 0.0;
 
@@ -153,7 +153,7 @@ namespace _Morpho4D
             return true;
         }
 
-        protected override Bitmap Icon => null;
-        public override Guid ComponentGuid => new Guid("55555555-6666-7777-8888-999999999999");
+        protected override Bitmap Icon => IconLoader.Get("CalibrationSolver");
+        public override Guid ComponentGuid => new Guid("62e472c9-d074-4e6d-91f0-1c2eede9943c");
     }
 }

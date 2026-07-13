@@ -20,7 +20,7 @@ namespace _Morpho4D
         public SetStimulus()
           : base("SetStimulusTest(HeatStim)", "Nickname",
             "Stimulus Test(HeatStim)",
-            "Morpho4D", "Stimulus")
+            "Morpho4D", "03 Stimulus")
         {
         }
 
@@ -54,7 +54,7 @@ namespace _Morpho4D
             DA.SetDataList(1, statList);
         }
 
-        protected override System.Drawing.Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => IconLoader.Get("SetStimulus");
 
         public override Guid ComponentGuid => new Guid("628e18af-effc-4e34-8861-37691c186fbb");
     }

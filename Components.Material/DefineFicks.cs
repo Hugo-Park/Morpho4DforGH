@@ -13,7 +13,7 @@ namespace _Morpho4D
         public DefineFicks()
           : base("Define Fick's", "F's",
             "Calculate hydrational level using Fick's law of diffusion",
-            "Morpho4D", "Material")
+            "Morpho4D", "02 Material")
         {
         }
 
@@ -43,7 +43,7 @@ namespace _Morpho4D
             DA.SetData(0, model);
         }
 
-        protected override System.Drawing.Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => IconLoader.Get("DefineFicks");
 
         public override Guid ComponentGuid => new Guid("25EC8DE4-CD5C-4099-A03C-F9B056389EA5");
     }

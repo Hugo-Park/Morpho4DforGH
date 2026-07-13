@@ -18,7 +18,7 @@ namespace _Morpho4D
         public MorphoSolverComponent()
           : base("Morpho Solver", "MSlv",
             "Simulation solver for Morpho4D",
-            "Morpho4D", "Solver")
+            "Morpho4D", "04 Solver")
         {
         }
 
@@ -34,6 +34,7 @@ namespace _Morpho4D
         {
             pManager.AddMeshParameter("Mesh", "M", "Deformed geometry after simulation", GH_ParamAccess.item);
             pManager.AddPointParameter("Points", "P", "Optimized voxel center points", GH_ParamAccess.list);
+            pManager.AddGenericParameter("Voxels", "VX", "Deformed Voxels", GH_ParamAccess.list);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
@@ -125,6 +126,7 @@ namespace _Morpho4D
 
             DA.SetData(0, deformedMesh);
             DA.SetDataList(1, resultPoints);
+            DA.SetDataList(2, voxelGoos);
         }
 
         private Mesh BuildDeformedBoxMesh(List<VoxelCell> voxels, List<Point3d> resultPoints)
@@ -148,7 +150,7 @@ namespace _Morpho4D
             return result;
         }
 
-        protected override System.Drawing.Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => IconLoader.Get("MorphoSolverComponent");
 
         public override Guid ComponentGuid => new Guid("F636672F-C5F7-4477-9183-E84C1D473262");
     }

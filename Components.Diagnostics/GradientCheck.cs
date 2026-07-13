@@ -13,26 +13,26 @@ namespace _Morpho4D
     {
         public GradientCheckComponent()
           : base("Gradient Check", "GradChk",
-              "유한차분법으로 energy gradient의 수치적 정확성을 검증한다. G(-1) 수정 후 세 가지 케이스 전부 PASS 확인 필수.",
-              "Morpho4D", "Diagnostics")
+              "Verifies the numerical accuracy of the energy gradient using the finite difference method. After modifying G(-1), it is mandatory to confirm that all three cases PASS.",
+              "Morpho4D", "05 Diagnostics")
         {
         }
 
         protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
             pManager.AddIntegerParameter("Test Case", "TC",
-                "0=Spring단독, 1=Bending단독, 2=혼합(3x3격자), 3=Spring+비등방(G1 이후)", GH_ParamAccess.item, 0);
-            pManager.AddNumberParameter("Epsilon", "Eps", "중심차분 섭동 크기 (default 1e-6)", GH_ParamAccess.item, 1e-6);
-            pManager.AddNumberParameter("Threshold", "Thr", "PASS 판정 최대 상대오차 (default 1e-4)", GH_ParamAccess.item, 1e-4);
-            pManager.AddBooleanParameter("Run", "Run", "true로 설정하면 검증 실행", GH_ParamAccess.item, false);
+                "0=Spring Only, 1=Bending Only, 2=Mixed (3x3 Grid), 3=Spring+Anisotropic (After G1)", GH_ParamAccess.item, 0);
+            pManager.AddNumberParameter("Epsilon", "Eps", "Central difference perturbation size (default 1e-6)", GH_ParamAccess.item, 1e-6);
+            pManager.AddNumberParameter("Threshold", "Thr", "Maximum relative error for PASS criteria (default 1e-4)", GH_ParamAccess.item, 1e-4);
+            pManager.AddBooleanParameter("Run", "Run", "Set to true to run verification", GH_ParamAccess.item, false);
         }
 
         protected override void RegisterOutputParams(GH_OutputParamManager pManager)
         {
-            pManager.AddTextParameter("Report", "R", "검증 결과 리포트", GH_ParamAccess.item);
-            pManager.AddNumberParameter("Max Relative Error", "MaxErr", "최대 성분별 상대오차", GH_ParamAccess.item);
-            pManager.AddIntegerParameter("Failed DOF Count", "Fail", "임계값 초과 DOF 개수", GH_ParamAccess.item);
-            pManager.AddBooleanParameter("Pass", "Pass", "PASS 여부", GH_ParamAccess.item);
+            pManager.AddTextParameter("Report", "R", "Verification result report", GH_ParamAccess.item);
+            pManager.AddNumberParameter("Max Relative Error", "MaxErr", "Maximum component-wise relative error", GH_ParamAccess.item);
+            pManager.AddIntegerParameter("Failed DOF Count", "Fail", "Number of DOFs exceeding the threshold", GH_ParamAccess.item);
+            pManager.AddBooleanParameter("Pass", "Pass", "Whether it PASSED", GH_ParamAccess.item);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
@@ -49,7 +49,7 @@ namespace _Morpho4D
 
             if (!run)
             {
-                DA.SetData(0, "Run 입력을 true로 설정하면 검증을 시작합니다.");
+                DA.SetData(0, "Set Run input to true to start verification.");
                 DA.SetData(1, 0.0);
                 DA.SetData(2, 0);
                 DA.SetData(3, false);
@@ -90,7 +90,7 @@ namespace _Morpho4D
                 case 1: return BuildBendingCase(size, mat);
                 case 2: return BuildMixedCase(size, mat);
                 case 3: return BuildAnisoSpringCase(size, mat);
-                default: throw new ArgumentException($"알 수 없는 테스트 케이스: {testCase}");
+                default: throw new ArgumentException($"Unknown test case: {testCase}");
             }
         }
 
@@ -102,14 +102,14 @@ namespace _Morpho4D
 
             var solver = new MorphoSolver(voxels);
             solver.allPairs.Add(new VoxelPair(v0, v1));
-            // hinge 없음
+            // No hinge
             return (solver, voxels);
         }
 
         private (MorphoSolver, List<VoxelCell>) BuildBendingCase(double size, SmpMat mat)
         {
             var v0 = MakeVoxel(0, 0, 0, 0, size, mat);
-            var v1 = MakeVoxel(1, size, 0, 0.1, size, mat);  // targetAngle != currentAngle 보장을 위해 약간 변위
+            var v1 = MakeVoxel(1, size, 0, 0.1, size, mat);  // Slight displacement to ensure targetAngle != currentAngle
             var v2 = MakeVoxel(2, size * 2, 0, 0, size, mat);
             var voxels = new List<VoxelCell> { v0, v1, v2 };
 
@@ -128,7 +128,7 @@ namespace _Morpho4D
 
         private (MorphoSolver, List<VoxelCell>) BuildMixedCase(double size, SmpMat mat)
         {
-            // 3×3 평면 격자
+            // 3x3 planar grid
             var voxels = new List<VoxelCell>();
             for (int ix = 0; ix < 3; ix++)
                 for (int iy = 0; iy < 3; iy++)
@@ -139,7 +139,7 @@ namespace _Morpho4D
 
             var solver = new MorphoSolver(voxels);
 
-            // spring pairs: 인접(거리=size)과 대각(거리=size*√2)
+            // spring pairs: adjacent (distance=size) and diagonal (distance=size*sqrt(2))
             double tol = size * 0.05;
             for (int a = 0; a < voxels.Count; a++)
                 for (int b = a + 1; b < voxels.Count; b++)
@@ -154,7 +154,7 @@ namespace _Morpho4D
                     }
                 }
 
-            // hinges: 정반대 쌍
+            // hinges: exact opposite pairs
             foreach (var center in voxels)
             {
                 var nb = center.neighborIndices;
@@ -182,7 +182,7 @@ namespace _Morpho4D
             var v0 = MakeVoxel(0, 0, 0, 0, size, mat, expansionForce: 1.0);
             var v1 = MakeVoxel(1, size, 0, 0, size, mat, expansionForce: 1.0);
 
-            // 비등방 설정
+            // Anisotropic setting
             v0.isActive = true;
             v0.fiberDir = Vector3d.XAxis;
             v0.epsMax = 0.05;
@@ -232,7 +232,7 @@ namespace _Morpho4D
                 
             var analytic = solver.DebugTotalGradient(x0);
 
-            // 수치 gradient
+            // Numerical gradient
             var numeric = Vector<double>.Build.Dense(n);
             for (int i = 0; i < n; i++)
             {
@@ -241,7 +241,7 @@ namespace _Morpho4D
                 numeric[i] = (solver.DebugTotalEnergy(xp) - solver.DebugTotalEnergy(xm)) / (2.0 * eps);
             }
 
-            // 성분별 상대오차
+            // Component-wise relative error
             double maxErr = 0.0;
             int failCount = 0;
             var sb = new System.Text.StringBuilder();
@@ -262,7 +262,7 @@ namespace _Morpho4D
             }
 
             bool pass = failCount == 0;
-            sb.AppendLine($"\n최대 상대오차: {maxErr:E4}  |  초과 DOF: {failCount}  |  판정: {(pass ? "PASS ✓" : "FAIL ✗")}");
+            sb.AppendLine($"\nMax Relative Error: {maxErr:E4}  |  Exceeded DOF: {failCount}  |  Result: {(pass ? "PASS ✓" : "FAIL ✗")}");
 
             return new CheckResult
             {
@@ -273,8 +273,8 @@ namespace _Morpho4D
             };
         }
 
-        protected override Bitmap Icon => null;
+        protected override Bitmap Icon => IconLoader.Get("GradientCheck");
 
-        public override Guid ComponentGuid => new Guid("BBBBBBB1-1111-2222-3333-444444444444");
+        public override Guid ComponentGuid => new Guid("fd85251c-087b-4d99-8d68-91793fdbd3ac");
     }
 }

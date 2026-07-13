@@ -8,34 +8,34 @@ using Rhino.Geometry;
 namespace _Morpho4D
 {
     /// <summary>
-    /// Fiji ImageJ의 CSV 측정 결과를 임포트해 실측 곡률(κ_exp)을 산출한다.
-    /// CSV 구분자 자동감지(쉼표/탭/세미콜론), FlipY 옵션, Y→Z 축 변환 옵션 지원.
+    /// Imports Fiji ImageJ CSV measurement results to calculate the measured curvature (κ_exp).
+    /// Supports automatic CSV delimiter detection (comma/tab/semicolon), FlipY option, and Y→Z axis conversion option.
     /// </summary>
     public class MeasurementImporterComponent : GH_Component
     {
         public MeasurementImporterComponent()
           : base("Measurement Importer", "MeasImp",
-              "Fiji CSV 측정값을 임포트해 실측 곡률(κ_exp)을 산출한다.",
-              "Morpho4D", "Validation")
+              "Imports Fiji CSV measurements to calculate the measured curvature (κ_exp).",
+              "Morpho4D", "06 Validation")
         {
         }
 
         protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
-            pManager.AddTextParameter("CSV Path", "CSV", "Fiji ImageJ 측정 CSV 파일 경로", GH_ParamAccess.item);
-            pManager.AddTextParameter("X Column", "xCol", "X 좌표 열 이름 (대소문자 무관)", GH_ParamAccess.item, "X");
-            pManager.AddTextParameter("Y Column", "yCol", "Y 좌표 열 이름 (대소문자 무관)", GH_ParamAccess.item, "Y");
-            pManager.AddNumberParameter("Scale", "Sc", "픽셀→mm 변환 스케일", GH_ParamAccess.item, 1.0);
-            pManager.AddBooleanParameter("Flip Y", "FY", "Y축 반전 여부 (이미지 좌표계 → 세계 좌표계)", GH_ParamAccess.item, true);
-            pManager.AddBooleanParameter("Y to Z", "YZ", "Y 값을 Z 축으로 변환 (평면도→측면도)", GH_ParamAccess.item, false);
+            pManager.AddTextParameter("CSV Path", "CSV", "Fiji ImageJ measurement CSV file path", GH_ParamAccess.item);
+            pManager.AddTextParameter("X Column", "xCol", "X coordinate column name (case-insensitive)", GH_ParamAccess.item, "X");
+            pManager.AddTextParameter("Y Column", "yCol", "Y coordinate column name (case-insensitive)", GH_ParamAccess.item, "Y");
+            pManager.AddNumberParameter("Scale", "Sc", "Pixel→mm conversion scale", GH_ParamAccess.item, 1.0);
+            pManager.AddBooleanParameter("Flip Y", "FY", "Whether to flip Y axis (Image coordinate system → World coordinate system)", GH_ParamAccess.item, true);
+            pManager.AddBooleanParameter("Y to Z", "YZ", "Convert Y values to Z axis (Plan view→Side view)", GH_ParamAccess.item, false);
         }
 
         protected override void RegisterOutputParams(GH_OutputParamManager pManager)
         {
-            pManager.AddPointParameter("Measured Points", "Pts", "임포트된 실측 포인트", GH_ParamAccess.list);
-            pManager.AddNumberParameter("κ_exp", "κ", "실측 곡률 (3점 원 피팅, 1/mm)", GH_ParamAccess.item);
-            pManager.AddNumberParameter("R_exp", "R", "실측 곡률 반지름 (mm)", GH_ParamAccess.item);
-            pManager.AddIntegerParameter("Point Count", "n", "임포트된 포인트 수", GH_ParamAccess.item);
+            pManager.AddPointParameter("Measured Points", "Pts", "Imported measured points", GH_ParamAccess.list);
+            pManager.AddNumberParameter("κ_exp", "κ", "Measured curvature (3-point circle fitting, 1/mm)", GH_ParamAccess.item);
+            pManager.AddNumberParameter("R_exp", "R", "Measured radius of curvature (mm)", GH_ParamAccess.item);
+            pManager.AddIntegerParameter("Point Count", "n", "Number of imported points", GH_ParamAccess.item);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
@@ -54,14 +54,14 @@ namespace _Morpho4D
 
             if (!File.Exists(csvPath))
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"파일을 찾을 수 없습니다: {csvPath}");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"File not found: {csvPath}");
                 return;
             }
 
             var pts = ParseCsv(csvPath, xCol, yCol, scale, flipY, yToZ);
             if (pts.Count < 3)
             {
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"포인트가 3개 미만입니다 ({pts.Count}개). 곡률 계산 불가.");
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Less than 3 points ({pts.Count} points). Cannot calculate curvature.");
                 DA.SetDataList(0, pts);
                 DA.SetData(1, 0.0); DA.SetData(2, 0.0); DA.SetData(3, pts.Count);
                 return;
@@ -83,7 +83,7 @@ namespace _Morpho4D
             var lines = File.ReadAllLines(path);
             if (lines.Length < 2) return pts;
 
-            // 구분자 자동감지
+            // Automatic delimiter detection
             char delim = DetectDelimiter(lines[0]);
 
             var header = lines[0].Split(new char[] { delim });
@@ -97,7 +97,7 @@ namespace _Morpho4D
             if (xi < 0 || yi < 0)
             {
                 AddRuntimeMessage(GH_RuntimeMessageLevel.Error,
-                    $"열 이름을 찾을 수 없습니다. X='{xCol}', Y='{yCol}'. 헤더: {lines[0]}");
+                    $"Column names not found. X='{xCol}', Y='{yCol}'. Header: {lines[0]}");
                 return pts;
             }
 
@@ -157,7 +157,7 @@ namespace _Morpho4D
             return true;
         }
 
-        protected override Bitmap Icon => null;
-        public override Guid ComponentGuid => new Guid("8A1C4E72-3F5B-4D91-A6E8-1B2C3D4E5F60");
+        protected override Bitmap Icon => IconLoader.Get("MeasurementImporter");
+        public override Guid ComponentGuid => new Guid("29b4b1a3-9e8d-4239-a7dd-339aa93dcd8d");
     }
 }

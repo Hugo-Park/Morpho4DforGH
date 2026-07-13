@@ -25,6 +25,7 @@ namespace Morpho4D.Solver
         public double hingeAngle;
         public double targetAngle;
         public Vector3d referenceNormal;
+        public double cachedK;
         public Hinge(int left, int center, int right)
         {
             this.leftId = left;
@@ -39,6 +40,8 @@ namespace Morpho4D.Solver
         public int idA;
         public int idB;
         public double pairLength;
+        public double cachedTargetDist;
+        public double cachedK;
         public VoxelPair(VoxelCell a, VoxelCell b)
         {
             this.idA = a.Id;
@@ -393,12 +396,35 @@ namespace Morpho4D.Solver
 
             for (int step = 1; step <= steps; step++)
             {
-                // 2차 곡선 시간 쪼개기 유지 (초반 스텝의 에러 방지)
+                // 2차 곡선 시간 쪼개기
                 double ratio = (double)step / steps;
                 double currentTime = time * Math.Pow(ratio, 2.0); 
 
                 this.updateAllState(currentTime, stimulus);
 
+                // [최적화] 스프링 및 힌지 강성/목표길이 캐싱
+                foreach(var pair in allPairs) {
+                    VoxelCell va = inputVoxels[pair.idA];
+                    VoxelCell vb = inputVoxels[pair.idB];
+                    
+                    Vector3d pairDir = vb.initialPoint - va.initialPoint;
+                    if (pairDir.Length > 1e-9) pairDir.Unitize();
+                    double aniso = 0.0;
+                    if (va.isActive) { double d = pairDir * va.fiberDir; aniso += 0.5 * va.epsMax * va.activationFraction * d * d; }
+                    if (vb.isActive) { double d = pairDir * vb.fiberDir; aniso += 0.5 * vb.epsMax * vb.activationFraction * d * d; }
+                    
+                    double avgExpansion = (va.expansionForce + vb.expansionForce) * 0.5;
+                    pair.cachedTargetDist = pair.pairLength * (avgExpansion + aniso);
+                    
+                    double E = (va.currentYoungsModulus + vb.currentYoungsModulus) * 0.5;
+                    pair.cachedK = (E * va.voxelSize * va.voxelSize) / pair.pairLength;
+                }
+
+                foreach(var hinge in allHinges) {
+                    double E = inputVoxels[hinge.centerId].currentYoungsModulus;
+                    double s = inputVoxels[hinge.centerId].voxelSize;
+                    hinge.cachedK = E * Math.Pow(s, 3) / 12.0;
+                }
                 double[] initialCoords = new double[inputVoxels.Count * 3];
                 for (int i = 0; i < inputVoxels.Count; i++)
                 {
@@ -556,25 +582,10 @@ namespace Morpho4D.Solver
             VoxelCell va = inputVoxels[pair.idA];
             VoxelCell vb = inputVoxels[pair.idB];
             double currentDist = va.currentPoint.DistanceTo(vb.currentPoint);
-            double initialDist = pair.pairLength;
-            if (initialDist < 1e-9) return 0.0;
+            
+            if (pair.pairLength < 1e-9) return 0.0;
 
-            double avgExpansion = (va.expansionForce + vb.expansionForce) * 0.5;
-
-            // G1: 비등방 eigenstrain 항 추가
-            Vector3d pairDir = vb.initialPoint - va.initialPoint;
-            if (pairDir.Length > 1e-9) pairDir.Unitize();
-            double aniso = 0.0;
-            if (va.isActive) { double d = pairDir * va.fiberDir; aniso += 0.5 * va.epsMax * va.activationFraction * d * d; }
-            if (vb.isActive) { double d = pairDir * vb.fiberDir; aniso += 0.5 * vb.epsMax * vb.activationFraction * d * d; }
-
-            double targetDist = initialDist * (avgExpansion + aniso);
-
-            double E = (va.currentYoungsModulus + vb.currentYoungsModulus) * 0.5;
-            double s = va.voxelSize;
-            double k = (E * s * s) / initialDist;
-
-            return 0.5 * k * Math.Pow(currentDist - targetDist, 2);
+            return 0.5 * pair.cachedK * Math.Pow(currentDist - pair.cachedTargetDist, 2);
         }
 
         /// <summary>
@@ -586,12 +597,7 @@ namespace Morpho4D.Solver
         {
             double currentAngle = this.calculateHingeAngle(hinge);
 
-            double E = inputVoxels[hinge.centerId].currentYoungsModulus;
-            double s = inputVoxels[hinge.centerId].voxelSize;
-            // 굽힘 강성에 /12.0 추가 (실제 단면2차모멘트 I = s^4/12 물리 공식 반영. 너무 뻣뻣해서 안 휘어지는 현상 해결)
-            double k = E * Math.Pow(s, 3) / 12.0;
-
-            return 0.5 * k * Math.Pow(currentAngle - hinge.targetAngle, 2);
+            return 0.5 * hinge.cachedK * Math.Pow(currentAngle - hinge.targetAngle, 2);
         }
 
         /// <summary>
@@ -612,25 +618,9 @@ namespace Morpho4D.Solver
                 currentDist = 0.0;
             }
 
-            double initialDist = pair.pairLength;
-            if (initialDist < 1e-9) return new Vector3d(0, 0, 0);
+            if (pair.pairLength < 1e-9) return new Vector3d(0, 0, 0);
 
-            double avgExpansion = (va.expansionForce + vb.expansionForce) * 0.5;
-
-            // G1: getSpringEnergy와 동일한 targetDist 수식 (gradient 일관성)
-            Vector3d pairDir = vb.initialPoint - va.initialPoint;
-            if (pairDir.Length > 1e-9) pairDir.Unitize();
-            double aniso = 0.0;
-            if (va.isActive) { double d = pairDir * va.fiberDir; aniso += 0.5 * va.epsMax * va.activationFraction * d * d; }
-            if (vb.isActive) { double d = pairDir * vb.fiberDir; aniso += 0.5 * vb.epsMax * vb.activationFraction * d * d; }
-
-            double targetDist = initialDist * (avgExpansion + aniso);
-
-            double E = (va.currentYoungsModulus + vb.currentYoungsModulus) * 0.5;
-            double s = va.voxelSize;
-            double k = (E * s * s) / initialDist;
-
-            double forceMagnitude = k * (currentDist - targetDist);
+            double forceMagnitude = pair.cachedK * (currentDist - pair.cachedTargetDist);
 
             dir.Unitize();
             return dir * forceMagnitude;
@@ -658,11 +648,7 @@ namespace Morpho4D.Solver
             double currentAngle = this.calculateHingeAngle(hinge);
             double targetAngle = hinge.targetAngle;
 
-            double E = inputVoxels[hinge.centerId].currentYoungsModulus;
-            double s = inputVoxels[hinge.centerId].voxelSize;
-            double k = E * Math.Pow(s, 3) / 12.0;  // G-1 fix: energy와 force에서 동일한 k 사용
-
-            double torqueMag = k * (currentAngle - targetAngle);
+            double torqueMag = hinge.cachedK * (currentAngle - targetAngle);
 
             Vector3d normal = Vector3d.CrossProduct(vectorLeft, vectorRight);
             if (normal.Length < 1e-4)

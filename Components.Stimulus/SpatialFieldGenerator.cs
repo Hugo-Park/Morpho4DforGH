@@ -8,38 +8,38 @@ using Rhino.Geometry;
 namespace _Morpho4D
 {
     /// <summary>
-    /// 공간 온도장을 생성한다. 특정 점과의 거리를 기반으로 온도를 계산하며,
-    /// Stimulus.temperatureField로 주입해 SmpMat이 위치별 온도를 반영할 수 있다.
+    /// Generates a spatial temperature field. Calculates temperature based on distance from a specific point,
+    /// and injects it into Stimulus.temperatureField so SmpMat can reflect location-specific temperatures.
     /// </summary>
     public class SpatialFieldGeneratorComponent : GH_Component
     {
         public SpatialFieldGeneratorComponent()
           : base("Spatial Field Generator", "SpatField",
-              "공간 위치 기반 온도장을 생성한다. Stimulus에 주입해 위치별 활성화를 구현.",
-              "Morpho4D", "Utility")
+              "Generates a spatial location-based temperature field. Injects into Stimulus to implement location-specific activation.",
+              "Morpho4D", "03 Stimulus")
         {
         }
 
         protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
-            pManager.AddGenericParameter("Stimulus", "S", "기존 Stimulus 객체", GH_ParamAccess.item);
+            pManager.AddGenericParameter("Stimulus", "S", "Existing Stimulus object", GH_ParamAccess.item);
             pManager.AddTextParameter("Field Type", "FT",
-                "온도장 유형: 'uniform'(균일), 'gradient_x'(X선형), 'gradient_z'(Z선형), 'radial'(방사형)",
+                "Temperature field type: 'uniform', 'gradient_x', 'gradient_z', 'radial'",
                 GH_ParamAccess.item, "uniform");
-            pManager.AddNumberParameter("T Min", "Tmin", "최소 온도 (°C)", GH_ParamAccess.item, 25.0);
-            pManager.AddNumberParameter("T Max", "Tmax", "최대 온도 (°C)", GH_ParamAccess.item, 80.0);
-            pManager.AddPointParameter("Origin", "O", "방사형 필드 중심점", GH_ParamAccess.item, Point3d.Origin);
-            pManager.AddNumberParameter("Radius", "R", "방사형 필드 반경 (mm)", GH_ParamAccess.item, 50.0);
+            pManager.AddNumberParameter("T Min", "Tmin", "Minimum temperature (°C)", GH_ParamAccess.item, 25.0);
+            pManager.AddNumberParameter("T Max", "Tmax", "Maximum temperature (°C)", GH_ParamAccess.item, 80.0);
+            pManager.AddPointParameter("Origin", "O", "Radial field origin point", GH_ParamAccess.item, Point3d.Origin);
+            pManager.AddNumberParameter("Radius", "R", "Radial field radius (mm)", GH_ParamAccess.item, 50.0);
             pManager.AddNumberParameter("Bounding Min", "BMin",
-                "선형 필드 좌표 범위 최솟값", GH_ParamAccess.item, 0.0);
+                "Minimum value of linear field coordinate range", GH_ParamAccess.item, 0.0);
             pManager.AddNumberParameter("Bounding Max", "BMax",
-                "선형 필드 좌표 범위 최댓값", GH_ParamAccess.item, 100.0);
+                "Maximum value of linear field coordinate range", GH_ParamAccess.item, 100.0);
         }
 
         protected override void RegisterOutputParams(GH_OutputParamManager pManager)
         {
-            pManager.AddGenericParameter("Stimulus with Field", "S", "temperatureField가 주입된 Stimulus", GH_ParamAccess.item);
-            pManager.AddTextParameter("Field Info", "?", "필드 설정 정보", GH_ParamAccess.item);
+            pManager.AddGenericParameter("Stimulus with Field", "S", "Stimulus with injected temperatureField", GH_ParamAccess.item);
+            pManager.AddTextParameter("Field Info", "?", "Field configuration info", GH_ParamAccess.item);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
@@ -68,11 +68,11 @@ namespace _Morpho4D
             {
                 case "gradient_x":
                     field = pt => tMin + tRange * Math.Max(0, Math.Min(1, (pt.X - bMin) / Math.Max(bRange, 1e-9)));
-                    info = $"X 선형 구배: [{bMin},{bMax}] → [{tMin},{tMax}] °C";
+                    info = $"X linear gradient: [{bMin},{bMax}] → [{tMin},{tMax}] °C";
                     break;
                 case "gradient_z":
                     field = pt => tMin + tRange * Math.Max(0, Math.Min(1, (pt.Z - bMin) / Math.Max(bRange, 1e-9)));
-                    info = $"Z 선형 구배: [{bMin},{bMax}] → [{tMin},{tMax}] °C";
+                    info = $"Z linear gradient: [{bMin},{bMax}] → [{tMin},{tMax}] °C";
                     break;
                 case "radial":
                     field = pt =>
@@ -81,11 +81,11 @@ namespace _Morpho4D
                         double t = 1.0 - Math.Max(0, Math.Min(1, d / Math.Max(radius, 1e-9)));
                         return tMin + tRange * t;
                     };
-                    info = $"방사형: 중심 {origin} 반경 {radius} mm, {tMax}°C → {tMin}°C";
+                    info = $"Radial: origin {origin} radius {radius} mm, {tMax}°C → {tMin}°C";
                     break;
                 default: // uniform
                     field = pt => stim.temperature;
-                    info = $"균일: {stim.temperature}°C";
+                    info = $"Uniform: {stim.temperature}°C";
                     break;
             }
 
@@ -95,7 +95,7 @@ namespace _Morpho4D
             DA.SetData(1, info);
         }
 
-        protected override Bitmap Icon => null;
-        public override Guid ComponentGuid => new Guid("AAAAAAA3-1111-2222-3333-444444444444");
+        protected override Bitmap Icon => IconLoader.Get("SpatialFieldGenerator");
+        public override Guid ComponentGuid => new Guid("e30bd584-67e0-4469-b96f-b749b83f4fc4");
     }
 }

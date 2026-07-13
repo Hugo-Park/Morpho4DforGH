@@ -7,29 +7,29 @@ using Rhino.Geometry;
 
 namespace _Morpho4D
 {
-    public class MorphMetricsComponent : GH_Component
+    public class MorphoMetricsComponent : GH_Component
     {
-        public MorphMetricsComponent()
-          : base("Morph Metrics", "Metrics",
-              "변형된 복셀 리스트에서 곡률(κ)을 측정한다. 3점 원 피팅(폴백: 직접 구현) 사용.",
-              "Morpho4D", "Analysis")
+        public MorphoMetricsComponent()
+          : base("Morpho Metrics", "Metrics",
+              "Measures curvature (κ) from the deformed voxel list. Uses 3-point circle fitting (fallback: custom implementation).",
+              "Morpho4D", "06 Validation")
         {
         }
 
         protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
-            pManager.AddGenericParameter("Voxels", "VX", "시뮬레이션 완료 후의 복셀 리스트", GH_ParamAccess.list);
+            pManager.AddGenericParameter("Voxels", "VX", "Voxel list after simulation", GH_ParamAccess.list);
             pManager.AddVectorParameter("Curvature Axis", "Ax",
-                "곡률을 측정할 축 방향 (이 방향을 따라 포인트를 슬라이싱)", GH_ParamAccess.item, Vector3d.XAxis);
+                "Axis direction to measure curvature (slicing points along this direction)", GH_ParamAccess.item, Vector3d.XAxis);
             pManager.AddIntegerParameter("Sample Count", "N",
-                "원 피팅에 사용할 샘플 포인트 수 (3 이상)", GH_ParamAccess.item, 5);
+                "Number of sample points to use for circle fitting (3 or more)", GH_ParamAccess.item, 5);
         }
 
         protected override void RegisterOutputParams(GH_OutputParamManager pManager)
         {
-            pManager.AddNumberParameter("Curvature κ", "κ", "평균 곡률 (1/mm)", GH_ParamAccess.item);
-            pManager.AddNumberParameter("Radius R", "R", "피팅 원의 반지름 (mm). 0이면 평평.", GH_ParamAccess.item);
-            pManager.AddPointParameter("Fitted Center", "C", "피팅 원의 중심점", GH_ParamAccess.item);
+            pManager.AddNumberParameter("Curvature κ", "κ", "Average curvature (1/mm)", GH_ParamAccess.item);
+            pManager.AddNumberParameter("Radius R", "R", "Radius of the fitted circle (mm). 0 if flat.", GH_ParamAccess.item);
+            pManager.AddPointParameter("Fitted Center", "C", "Center point of the fitted circle", GH_ParamAccess.item);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
@@ -43,14 +43,14 @@ namespace _Morpho4D
             DA.GetData(2, ref sampleN);
 
             if (sampleN < 3) sampleN = 3;
-            if (axis.Length < 1e-9) { AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Axis가 영벡터입니다."); return; }
+            if (axis.Length < 1e-9) { AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Axis is a zero vector."); return; }
             axis.Unitize();
 
             var voxels = new List<VoxelCell>();
             foreach (var g in voxelGoos) if (g?.Value != null) voxels.Add(g.Value);
-            if (voxels.Count < 3) { AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "복셀이 3개 미만입니다."); return; }
+            if (voxels.Count < 3) { AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Less than 3 voxels."); return; }
 
-            // axis 방향으로 정렬 후 균등 샘플
+            // Sort along the axis direction and uniformly sample
             voxels.Sort((a, b) =>
             {
                 double da = a.currentPoint.X * axis.X + a.currentPoint.Y * axis.Y + a.currentPoint.Z * axis.Z;
@@ -67,7 +67,7 @@ namespace _Morpho4D
                 samples.Add(voxels[idx].currentPoint);
             }
 
-            // 3점 원 피팅 (중앙-삼등분 선택)
+            // 3-point circle fitting (middle-trisection selection)
             Point3d center = Point3d.Origin;
             double R = 0.0;
 
@@ -93,7 +93,7 @@ namespace _Morpho4D
             DA.SetData(2, center);
         }
 
-        // 3점 외접원 직접 구현 (폴백 — RhinoCommon Circle.TryFitCircleToPoints 없이 동작)
+        // 3-point circumcircle custom implementation (fallback — works without RhinoCommon Circle.TryFitCircleToPoints)
         private static bool Circle3Pt(Point3d a, Point3d b, Point3d c, out Point3d center, out double R)
         {
             center = Point3d.Origin; R = 0;
@@ -114,7 +114,7 @@ namespace _Morpho4D
             return true;
         }
 
-        protected override Bitmap Icon => null;
-        public override Guid ComponentGuid => new Guid("44444444-5555-6666-7777-888888888888");
+        protected override Bitmap Icon => IconLoader.Get("MorphMetrics");
+        public override Guid ComponentGuid => new Guid("bac78788-0141-4874-b1d6-ffa0555dd378");
     }
 }

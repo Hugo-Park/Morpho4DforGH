@@ -11,24 +11,24 @@ namespace _Morpho4D
     {
         public SetFiberDirectionComponent()
           : base("Set Fiber Direction", "Fiber",
-              "isActive=true인 복셀에 섬유 방향(fiberDir)과 최대 eigenstrain(epsMax)을 지정한다.",
-              "Morpho4D", "Material")
+              "Assigns fiber direction (fiberDir) and maximum eigenstrain (epsMax) to voxels with isActive=true.",
+              "Morpho4D", "02 Material")
         {
         }
 
         protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
-            pManager.AddGenericParameter("Voxels", "VX", "BilayerMaterial을 통과한 복셀 리스트", GH_ParamAccess.list);
+            pManager.AddGenericParameter("Voxels", "VX", "List of voxels passed through BilayerMaterial", GH_ParamAccess.list);
             pManager.AddVectorParameter("Fiber Direction", "D",
-                "섬유 방향 단위벡터. 자동으로 정규화됨.", GH_ParamAccess.item, Vector3d.XAxis);
+                "Fiber direction unit vector. Normalized automatically.", GH_ParamAccess.item, Vector3d.XAxis);
             pManager.AddNumberParameter("Eps Max", "ε",
-                "최대 eigenstrain (활성화 완료 시 최대 변형률). 수축이면 음수.", GH_ParamAccess.item, 0.0);
+                "Maximum eigenstrain (maximum strain when activation is complete). Negative for shrinkage.", GH_ParamAccess.item, 0.0);
         }
 
         protected override void RegisterOutputParams(GH_OutputParamManager pManager)
         {
-            pManager.AddGenericParameter("Voxels", "VX", "섬유 방향이 지정된 복셀 리스트", GH_ParamAccess.list);
-            pManager.AddIntegerParameter("Updated Count", "n", "업데이트된 active 복셀 수", GH_ParamAccess.item);
+            pManager.AddGenericParameter("Voxels", "VX", "List of voxels with fiber direction assigned", GH_ParamAccess.list);
+            pManager.AddIntegerParameter("Updated Count", "n", "Number of updated active voxels", GH_ParamAccess.item);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
@@ -43,7 +43,7 @@ namespace _Morpho4D
 
             if (fiberDir.Length < 1e-9)
             {
-                this.AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Fiber Direction이 영벡터입니다.");
+                this.AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Fiber Direction is a zero vector.");
                 return;
             }
             fiberDir.Unitize();
@@ -68,7 +68,7 @@ namespace _Morpho4D
             DA.SetData(1, updated);
         }
 
-        protected override Bitmap Icon => null;
-        public override Guid ComponentGuid => new Guid("33333333-4444-5555-6666-777777777777");
+        protected override Bitmap Icon => IconLoader.Get("SetFiberDirection");
+        public override Guid ComponentGuid => new Guid("5fb060cd-157c-4abb-9f82-4e83c1cba00a");
     }
 }

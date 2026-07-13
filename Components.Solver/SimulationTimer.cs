@@ -6,32 +6,32 @@ using Grasshopper.Kernel;
 namespace _Morpho4D
 {
     /// <summary>
-    /// 시뮬레이션 타임스텝을 생성한다. SimulationPlayer와 함께 애니메이션용 시간 시퀀스를 제공.
+    /// Generates simulation timesteps. Provides a time sequence for animation in conjunction with SimulationPlayer.
     /// </summary>
     public class SimulationTimerComponent : GH_Component
     {
         public SimulationTimerComponent()
           : base("Simulation Timer", "SimTimer",
-              "시뮬레이션 시간 시퀀스를 생성한다. SimulationPlayer와 연결해 애니메이션 구현.",
-              "Morpho4D", "Utility")
+              "Generates a simulation time sequence. Connect with SimulationPlayer to implement animation.",
+              "Morpho4D", "04 Solver")
         {
         }
 
         protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
-            pManager.AddNumberParameter("Start Time", "T0", "시작 시간", GH_ParamAccess.item, 0.0);
-            pManager.AddNumberParameter("End Time", "T1", "종료 시간", GH_ParamAccess.item, 1.0);
-            pManager.AddIntegerParameter("Steps", "N", "총 스텝 수", GH_ParamAccess.item, 10);
-            pManager.AddIntegerParameter("Current Frame", "F", "현재 프레임 인덱스 (0-based)", GH_ParamAccess.item, 0);
+            pManager.AddNumberParameter("Start Time", "T0", "Start time", GH_ParamAccess.item, 0.0);
+            pManager.AddNumberParameter("End Time", "T1", "End time", GH_ParamAccess.item, 1.0);
+            pManager.AddIntegerParameter("Steps", "N", "Total number of steps", GH_ParamAccess.item, 10);
+            pManager.AddIntegerParameter("Current Frame", "F", "Current frame index (0-based)", GH_ParamAccess.item, 0);
             pManager.AddBooleanParameter("Quadratic", "Q",
-                "2차 곡선 시간 분배 (초반 촘촘, 후반 성김)", GH_ParamAccess.item, false);
+                "Quadratic time distribution (dense at start, sparse at end)", GH_ParamAccess.item, false);
         }
 
         protected override void RegisterOutputParams(GH_OutputParamManager pManager)
         {
-            pManager.AddNumberParameter("Current Time", "T", "현재 프레임의 시간값", GH_ParamAccess.item);
-            pManager.AddNumberParameter("All Times", "Ts", "전체 시간 시퀀스", GH_ParamAccess.list);
-            pManager.AddNumberParameter("Progress", "%", "진행률 (0~1)", GH_ParamAccess.item);
+            pManager.AddNumberParameter("Current Time", "T", "Time value of the current frame", GH_ParamAccess.item);
+            pManager.AddNumberParameter("All Times", "Ts", "Complete time sequence", GH_ParamAccess.list);
+            pManager.AddNumberParameter("Progress", "%", "Progress (0~1)", GH_ParamAccess.item);
         }
 
         protected override void SolveInstance(IGH_DataAccess DA)
@@ -63,7 +63,7 @@ namespace _Morpho4D
             DA.SetData(2, progress);
         }
 
-        protected override Bitmap Icon => null;
-        public override Guid ComponentGuid => new Guid("AAAAAAA4-1111-2222-3333-444444444444");
+        protected override Bitmap Icon => IconLoader.Get("SimulationTimer");
+        public override Guid ComponentGuid => new Guid("a27ac3c8-91ea-4a57-849e-752db859785b");
     }
 }
