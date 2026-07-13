@@ -54,7 +54,9 @@ namespace _Morpho4D
                 tree.Insert(voxels[i].currentPoint, i);
             }
 
-            double searchRadius = voxels.Count > 0 ? voxels[0].voxelSize * 1.2 : 0.5;
+            // 앵커 포인트를 찾을 때 반경이 복셀 크기(1.2)보다 크면 위아래 양옆의 엉뚱한 복셀들까지 통째로 고정됩니다.
+            // 정확히 해당 포인트 위치의 복셀만 고정하도록 탐색 반경을 아주 작은 오차 범위(0.1)로 줄입니다.
+            double searchRadius = voxels.Count > 0 ? voxels[0].voxelSize * 0.1 : 0.1;
 
             foreach(Point3d p in inputPoints)
             {

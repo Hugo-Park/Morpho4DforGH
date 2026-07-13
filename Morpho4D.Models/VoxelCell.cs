@@ -69,8 +69,8 @@ namespace Morpho4D.Models
         public static List<VoxelCell> createVoxels(Brep inputBrep, double size)
         {
             MeshingParameters mParams = MeshingParameters.Default;
-            mParams.MaximumEdgeLength = size;
-            mParams.MinimumEdgeLength = size * 0.5;
+            mParams.MaximumEdgeLength = size * 0.85;
+            mParams.MinimumEdgeLength = size * 0.85;
             mParams.GridAspectRatio = 1.0;
 
             Mesh[] meshes = Mesh.CreateFromBrep(inputBrep, mParams);

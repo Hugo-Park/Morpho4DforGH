@@ -64,7 +64,7 @@ namespace _Morpho4D
                 if (g?.Value == null) continue;
                 var v = g.Value;
 
-                bool inRegion = (region == null) || region.IsPointInside(v.initialPoint, 0.01, true);
+                bool inRegion = (region == null) || region.IsPointInside(v.initialPoint, 0.01, false);
                 if (inRegion)
                 {
                     v.appliedLoad = loadVec;
