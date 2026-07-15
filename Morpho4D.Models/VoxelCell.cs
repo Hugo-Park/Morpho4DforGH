@@ -81,11 +81,34 @@ namespace Morpho4D.Models
             combinedMesh.Vertices.CombineIdentical(true, true);
             combinedMesh.Weld(0.1);
 
-            List<VoxelCell> result = new List<VoxelCell>();
+            // [Point Culling Patch] 표면 복셀 최적화
+            // 피라미드 꼭짓점처럼 점들이 밀집되는 특이점(Singularity)에서 
+            // 점들이 겹쳐 물리 엔진의 강성이 무한대로 폭발하는 것을 방지합니다.
+            Rhino.Geometry.RTree tree = new Rhino.Geometry.RTree();
+            List<Point3d> culledPoints = new List<Point3d>();
+            double cullDistance = size * 0.5;
 
             for (int i = 0; i < combinedMesh.Vertices.Count; i++)
             {
-                Point3d voxelPos = new Point3d(combinedMesh.Vertices[i]);
+                Point3d p = new Point3d(combinedMesh.Vertices[i]);
+                bool tooClose = false;
+                tree.Search(new Sphere(p, cullDistance), (sender, args) =>
+                {
+                    tooClose = true;
+                });
+
+                if (!tooClose)
+                {
+                    culledPoints.Add(p);
+                    tree.Insert(p, culledPoints.Count - 1);
+                }
+            }
+
+            List<VoxelCell> result = new List<VoxelCell>();
+
+            for (int i = 0; i < culledPoints.Count; i++)
+            {
+                Point3d voxelPos = culledPoints[i];
                 VoxelCell newCell = new VoxelCell(i, voxelPos);
                 newCell.voxelSize = size;
 

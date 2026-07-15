@@ -264,10 +264,11 @@ namespace Morpho4D.Solver
                 tree.Insert(inputVoxels[i].initialPoint, i);
             }
 
-            // 사용자가 의도적으로 틈(Gap)을 벌려놓은 면들이 서로 연결되어 하나의 단단한 상자로 용접되는 것을 막기 위해,
-            // 탐색 반경을 아주 타이트하게 1.01배로 줄입니다. (소수점 오차만 허용)
-            // 틈이 1% 이상 벌어져 있으면 완벽하게 분리된 독립된 벽으로 인식됩니다.
-            double searchRadius = size * 1.01;
+            // [범용 입체 형태 호환 패치]
+            // 비정형 메쉬, 자유곡면, 다면체 등 모든 형태가 산산조각 나지 않고 연결되도록
+            // 탐색 반경을 1.5배로 넉넉하게 확장합니다. (대각선 연결 포함)
+            // 주의: 이렇게 하면 의도적으로 분리할 옆면의 틈을 '복셀 크기의 50% 이상'으로 크게 띄워야 합니다.
+            double searchRadius = size * 1.5;
 
             for (int i = 0; i < inputVoxels.Count; i++)
             {
@@ -287,8 +288,8 @@ namespace Morpho4D.Solver
                 });
             }
 
-            // 힌지: 비정형 연결망에서 굽힘 강성을 확보하기 위해
-            // 완벽한 180도(평각) 대신 90도 이상 벌어진 이웃 쌍을 모두 힌지로 간주합니다.
+            // 힌지: 자유곡면이나 뾰족한 입체 형태에서도 관절이 생성되도록 제한을 대폭 낮춤
+            // 거의 모든 이웃 쌍(18도 이상)에 대해 힌지를 생성하여 복잡한 형태의 뼈대를 완벽히 굳힘
             foreach (VoxelCell center in inputVoxels)
             {
                 var nb = center.neighborIndices;
@@ -301,8 +302,8 @@ namespace Morpho4D.Solver
                         if (va.Length < 1e-6 || vb.Length < 1e-6) continue;
                         va.Unitize(); vb.Unitize();
                         
-                        // 두 이웃 벡터 사이의 각도가 90도(PI/2)보다 크면 힌지로 등록 (90도 포함 위해 0.49로 여유분)
-                        if (Vector3d.VectorAngle(va, vb) > Math.PI * 0.49)
+                        // 18도(Math.PI * 0.1) 이상이면 모두 힌지로 등록 (다양한 입체 대응)
+                        if (Vector3d.VectorAngle(va, vb) > Math.PI * 0.1)
                         {
                             Hinge h = new Hinge(nb[a], center.Id, nb[b]);
                             Vector3d rn = Vector3d.CrossProduct(va, vb);

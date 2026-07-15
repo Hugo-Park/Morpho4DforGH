@@ -42,11 +42,12 @@ DLLEXPORT void OptimizeMorpho(
     std::vector<Vector3> m(numVoxels, Vector3(0,0,0));
     std::vector<Vector3> v(numVoxels, Vector3(0,0,0));
     
-    // [Convergence Patch]
-    // C#에서 넘어오는 150번의 반복 횟수는 L-BFGS에는 충분하지만 Adam에는 턱없이 부족합니다.
-    // 90도로 접히기 전에 조기 종료되는 현상을 막기 위해 반복 횟수와 속도를 강제로 늘립니다.
-    maxIterations = 2000; 
-    double alpha = 0.05; // 학습률 — 0.2에서 0.05로 낮춤 (오버슈팅으로 복셀 비산 방지)
+    // [Convergence & Performance Patch]
+    // 최근 적용한 다이내믹 멀티플라이어와 유효 하중 스케일링 패치 덕분에 시스템 안정성이 극대화되었습니다.
+    // 따라서 굳이 2000번씩 잘게 쪼개서 계산할 필요 없이, 보폭(alpha)을 키우고 반복 횟수를 대폭 줄여서
+    // 이전 L-BFGS 수준의 빠른 연산 속도를 되찾습니다. (속도 4배 향상)
+    maxIterations = 500; 
+    double alpha = 0.2;
     
     double beta1 = 0.9;
     double beta2 = 0.999;
@@ -177,39 +178,30 @@ DLLEXPORT void OptimizeMorpho(
             }
         }
 
-        // 4. Adam 최적화 업데이트 (극단적인 강성 차이 극복)
+        // 4. 물리적 상대 강성 보존 업데이트 (Momentum SGD + Gradient Clipping)
+        double MAX_FORCE = 50.0; // 폭발 방지를 위한 최대 힘 제한
+        
         for (int i = 0; i < numVoxels; ++i) {
             if (isFixed[i]) continue;
             
             // 수학적 그래디언트는 물리적 힘의 반대 (G = -Force)
             Vector3 g(-grad[i].x, -grad[i].y, -grad[i].z);
             
-            m[i].x = beta1 * m[i].x + (1.0 - beta1) * g.x;
-            m[i].y = beta1 * m[i].y + (1.0 - beta1) * g.y;
-            m[i].z = beta1 * m[i].z + (1.0 - beta1) * g.z;
+            double g_len = std::sqrt(g.x*g.x + g.y*g.y + g.z*g.z);
+            if (g_len > MAX_FORCE) {
+                g.x = g.x * (MAX_FORCE / g_len);
+                g.y = g.y * (MAX_FORCE / g_len);
+                g.z = g.z * (MAX_FORCE / g_len);
+            }
             
-            v[i].x = beta2 * v[i].x + (1.0 - beta2) * g.x * g.x;
-            v[i].y = beta2 * v[i].y + (1.0 - beta2) * g.y * g.y;
-            v[i].z = beta2 * v[i].z + (1.0 - beta2) * g.z * g.z;
+            // 관성(Momentum) 업데이트 (Velocity)
+            m[i].x = beta1 * m[i].x + alpha * g.x;
+            m[i].y = beta1 * m[i].y + alpha * g.y;
+            m[i].z = beta1 * m[i].z + alpha * g.z;
             
-            double m_hat_x = m[i].x / (1.0 - std::pow(beta1, iter));
-            double m_hat_y = m[i].y / (1.0 - std::pow(beta1, iter));
-            double m_hat_z = m[i].z / (1.0 - std::pow(beta1, iter));
-            
-            double v_hat_x = v[i].x / (1.0 - std::pow(beta2, iter));
-            double v_hat_y = v[i].y / (1.0 - std::pow(beta2, iter));
-            double v_hat_z = v[i].z / (1.0 - std::pow(beta2, iter));
-            
-            // [Stiffness Locking 돌파 패치 - Standard Adam 복구]
-            // 물리 방향성을 강제로 맞추면(L2 norm), PLA의 막대한 X축 복원력(3000) 때문에 
-            // 눕기 위해 필요한 미세한 Z축 힘(1)이 완전히 무시되어(step_z = 0.00001) 절대 펴지지 않습니다.
-            // Adam의 원래 방식대로 X, Y, Z를 독립적으로 정규화해야 미세한 Z축 힘도 증폭되어 
-            // 단단한 벽이 허공에서 곡선을 그리며 누울 수 있습니다!
-            double epsilon_adam = 1.0; 
-            
-            double step_x = alpha * m_hat_x / (std::sqrt(v_hat_x) + epsilon_adam);
-            double step_y = alpha * m_hat_y / (std::sqrt(v_hat_y) + epsilon_adam);
-            double step_z = alpha * m_hat_z / (std::sqrt(v_hat_z) + epsilon_adam);
+            double step_x = m[i].x;
+            double step_y = m[i].y;
+            double step_z = m[i].z;
             
             // [이동거리 제한] 한 스텝에 스프링 길이의 10% 이상 이동 금지 → 복셀 비산 방지
             double stepLen = std::sqrt(step_x*step_x + step_y*step_y + step_z*step_z);
