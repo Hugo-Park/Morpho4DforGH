@@ -187,34 +187,81 @@ DLLEXPORT void OptimizeMorpho(
             // 수학적 그래디언트는 물리적 힘의 반대 (G = -Force)
             Vector3 g(-grad[i].x, -grad[i].y, -grad[i].z);
             
-            double g_len = std::sqrt(g.x*g.x + g.y*g.y + g.z*g.z);
-            if (g_len > MAX_FORCE) {
-                g.x = g.x * (MAX_FORCE / g_len);
-                g.y = g.y * (MAX_FORCE / g_len);
-                g.z = g.z * (MAX_FORCE / g_len);
-            }
+            // Adam update steps for m and v
+            m[i].x = beta1 * m[i].x + (1.0 - beta1) * g.x;
+            m[i].y = beta1 * m[i].y + (1.0 - beta1) * g.y;
+            m[i].z = beta1 * m[i].z + (1.0 - beta1) * g.z;
             
-            // 관성(Momentum) 업데이트 (Velocity)
-            m[i].x = beta1 * m[i].x + alpha * g.x;
-            m[i].y = beta1 * m[i].y + alpha * g.y;
-            m[i].z = beta1 * m[i].z + alpha * g.z;
+            v[i].x = beta2 * v[i].x + (1.0 - beta2) * g.x * g.x;
+            v[i].y = beta2 * v[i].y + (1.0 - beta2) * g.y * g.y;
+            v[i].z = beta2 * v[i].z + (1.0 - beta2) * g.z * g.z;
             
-            double step_x = m[i].x;
-            double step_y = m[i].y;
-            double step_z = m[i].z;
+            double m_hat_x = m[i].x / (1.0 - std::pow(beta1, iter));
+            double m_hat_y = m[i].y / (1.0 - std::pow(beta1, iter));
+            double m_hat_z = m[i].z / (1.0 - std::pow(beta1, iter));
+            
+            double v_hat_x = v[i].x / (1.0 - std::pow(beta2, iter));
+            double v_hat_y = v[i].y / (1.0 - std::pow(beta2, iter));
+            double v_hat_z = v[i].z / (1.0 - std::pow(beta2, iter));
+            
+            // 등방성(Isotropic) 정규화
+            // X, Y, Z 방향을 독립적으로 계산하면 벡터의 방향성이 파괴되어 PBD와 충돌 시 이동이 상쇄됩니다.
+            // 벡터의 크기로 전체를 스케일링하여 실제 물리적 힘의 방향을 유지합니다.
+            // 수학적 버그(v_hat 제곱근)가 수정되었으므로 이제 Z축 하중도 정상적으로 반영됩니다.
+            double epsilon_adam = epsilon;
+            double v_denom = std::sqrt(v_hat_x + v_hat_y + v_hat_z);
+            double scale = alpha / (v_denom + epsilon_adam);
+            
+            double step_x = m_hat_x * scale;
+            double step_y = m_hat_y * scale;
+            double step_z = m_hat_z * scale;
             
             // [이동거리 제한] 한 스텝에 스프링 길이의 10% 이상 이동 금지 → 복셀 비산 방지
             double stepLen = std::sqrt(step_x*step_x + step_y*step_y + step_z*step_z);
             if (stepLen > maxStep) {
-                double scale = maxStep / stepLen;
-                step_x *= scale;
-                step_y *= scale;
-                step_z *= scale;
+                double scale_cap = maxStep / stepLen;
+                step_x *= scale_cap;
+                step_y *= scale_cap;
+                step_z *= scale_cap;
             }
             
             coords[i * 3 + 0] -= step_x;
             coords[i * 3 + 1] -= step_y;
             coords[i * 3 + 2] -= step_z;
+        }
+    }
+
+    // 5. Post-Simulation PBD (완벽한 강체 복원)
+    for (int pbd_iter = 0; pbd_iter < 50; ++pbd_iter) {
+        for (int i = 0; i < numSprings; ++i) {
+            double k = springParams[i * 3 + 2];
+            if (k < 1000.0) continue; // 부드러운 SMP(관절)는 자유롭게 휘도록 내버려 둠
+            
+            int a = springIds[i * 2 + 0];
+            int b = springIds[i * 2 + 1];
+            double targetLength = springParams[i * 3 + 1];
+            
+            Vector3 pA(coords[a*3], coords[a*3+1], coords[a*3+2]);
+            Vector3 pB(coords[b*3], coords[b*3+1], coords[b*3+2]);
+            
+            Vector3 dir = pA - pB;
+            double curLen = std::sqrt(dir.x*dir.x + dir.y*dir.y + dir.z*dir.z);
+            if (curLen < 1e-9) continue;
+            
+            // 중심점을 기준으로 두 점을 타겟 거리만큼 밀어냄
+            double diff = (curLen - targetLength) / curLen;
+            Vector3 correction = dir * (0.5 * diff);
+            
+            if (!isFixed[a]) {
+                coords[a*3] -= correction.x;
+                coords[a*3+1] -= correction.y;
+                coords[a*3+2] -= correction.z;
+            }
+            if (!isFixed[b]) {
+                coords[b*3] += correction.x;
+                coords[b*3+1] += correction.y;
+                coords[b*3+2] += correction.z;
+            }
         }
     }
 }
