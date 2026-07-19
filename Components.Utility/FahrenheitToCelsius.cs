@@ -16,6 +16,9 @@ namespace _Morpho4D
         {
         }
 
+        public override GH_Exposure Exposure => GH_Exposure.hidden;
+        public override bool Obsolete => true;
+
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
             pManager.AddNumberParameter("\u00B0F", "\u00B0F", "Temperature in Fahrenheit", GH_ParamAccess.item, 0.0);

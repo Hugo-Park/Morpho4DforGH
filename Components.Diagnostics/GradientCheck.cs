@@ -18,6 +18,9 @@ namespace _Morpho4D
         {
         }
 
+        public override GH_Exposure Exposure => GH_Exposure.hidden;
+        public override bool Obsolete => true;
+
         protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
             pManager.AddIntegerParameter("Test Case", "TC",
