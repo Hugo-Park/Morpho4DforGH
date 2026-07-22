@@ -24,7 +24,6 @@ namespace _Morpho4D
 
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
-            pManager.AddBrepParameter("Base Breps", "BB", "Original reference Brep objects", GH_ParamAccess.list);
             pManager.AddGenericParameter("Voxels", "VX", "List of Voxel objects", GH_ParamAccess.list);
             pManager.AddGenericParameter("Stimulus", "S", "External stimulus object (e.g., Temperature, Humidity) that triggers voxel deformation.", GH_ParamAccess.list);
             pManager.AddNumberParameter("Time", "T", "Simulation Time Step", GH_ParamAccess.item);
@@ -32,7 +31,7 @@ namespace _Morpho4D
                 "If true, continues from current deformed positions instead of resetting to permanent shape. " +
                 "Use for Phase 2 (recovery) after applying deformation in Phase 1.",
                 GH_ParamAccess.item, false);
-            pManager[4].Optional = true;
+            pManager[3].Optional = true;
         }
 
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
@@ -50,14 +49,12 @@ namespace _Morpho4D
             double time = 0;
             List<VoxelCellGoo> voxelGoos = new List<VoxelCellGoo>();
             List<Stimulus> stimulus = new List<Stimulus>();
-            List<Brep> baseBreps = new List<Brep>();
             bool continueFromCurrent = false;
 
-            if (!DA.GetDataList(0, baseBreps)) { return; }
-            if (!DA.GetDataList(1, voxelGoos)) { return; }
-            if (!DA.GetDataList(2, stimulus)) { return; }
-            if (!DA.GetData(3, ref time)) { return; }
-            DA.GetData(4, ref continueFromCurrent);
+            if (!DA.GetDataList(0, voxelGoos)) { return; }
+            if (!DA.GetDataList(1, stimulus)) { return; }
+            if (!DA.GetData(2, ref time)) { return; }
+            DA.GetData(3, ref continueFromCurrent);
 
             // 입력 필터
             if (stimulus.Count >= 2)
@@ -122,7 +119,7 @@ namespace _Morpho4D
             DA.SetDataList(2, voxelGoos);
         }
 
-        private Mesh BuildDeformedBoxMesh(List<VoxelCell> voxels, List<Point3d> resultPoints)
+        public static Mesh BuildDeformedBoxMesh(List<VoxelCell> voxels, List<Point3d> resultPoints)
         {
             Mesh result = new Mesh();
             if (voxels.Count == 0) return result;
