@@ -18,8 +18,8 @@ namespace _Morpho4D
         /// new tabs/panels will automatically be created.
         /// </summary>
         public SetStimulus()
-          : base("SetStimulusTest(HeatStim)", "Nickname",
-            "Stimulus Test(HeatStim)",
+          : base("Set Heat Stimuulus", "HS",
+            "Sets temperature for heat stimulus",
             "Morpho4D", "03 Stimulus")
         {
         }

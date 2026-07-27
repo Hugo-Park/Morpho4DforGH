@@ -93,6 +93,7 @@ namespace _Morpho4D
             DA.SetData(3, diagMsg);
 
             solver.execute(time, stimulus[0], continueFromCurrent);
+            SolverHistoryMonitorComponent.RegisterSolver(solver);
 
             // 출력 점 리스트 생성
             List<Point3d> resultPoints = solver.getResultPoints();
