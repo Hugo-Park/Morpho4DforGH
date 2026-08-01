@@ -68,8 +68,7 @@ namespace _Morpho4D
             
             DA.SetDataList(0, voxelGoos);
         }
-
-        protected override System.Drawing.Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("Anchor");
 
         public override Guid ComponentGuid => new Guid("a094b042-81a4-44bd-88f0-6f093ae56328");
     }

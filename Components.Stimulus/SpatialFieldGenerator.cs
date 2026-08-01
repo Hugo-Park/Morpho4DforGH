@@ -94,8 +94,8 @@ namespace _Morpho4D
             DA.SetData(0, stim);
             DA.SetData(1, info);
         }
-
-        protected override Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("SpatialFieldGenerator");
         public override Guid ComponentGuid => new Guid("e30bd584-67e0-4469-b96f-b749b83f4fc4");
     }
 }
+

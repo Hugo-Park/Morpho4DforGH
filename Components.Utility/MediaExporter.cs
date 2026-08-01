@@ -95,8 +95,7 @@ namespace _Morpho4D
 
             DA.SetData(1, processed);
         }
-
-        protected override Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("MediaExporter");
         public override Guid ComponentGuid => new Guid("e56fbad5-5081-4794-8732-8ccf53ed562a");
     }
 
@@ -246,3 +245,4 @@ namespace _Morpho4D
         }
     }
 }
+

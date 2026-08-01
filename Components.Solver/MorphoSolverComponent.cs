@@ -140,8 +140,7 @@ namespace _Morpho4D
             }
             return result;
         }
-
-        protected override System.Drawing.Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("MorphoSolverComponent");
 
         public override Guid ComponentGuid => new Guid("F636672F-C5F7-4477-9183-E84C1D473262");
     }

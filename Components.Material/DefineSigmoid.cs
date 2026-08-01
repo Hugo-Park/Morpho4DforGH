@@ -45,8 +45,7 @@ namespace _Morpho4D
             SigmoidModel model = new SigmoidModel(tg, eg, er, k);
             DA.SetData(0, model);
         }
-
-        protected override System.Drawing.Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("DefineSigmoid");
 
         public override Guid ComponentGuid => new Guid("8d29bc3b-2930-4b46-8112-63bc499a8d26");
     }

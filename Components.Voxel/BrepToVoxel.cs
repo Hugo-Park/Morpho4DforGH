@@ -107,7 +107,7 @@ namespace _Morpho4D
                 args.Display.DrawBrepWires(previewBrep, previewMat.getPreviewColor(), -1);
             }
         }
-        protected override System.Drawing.Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("BrepToVoxel");
 
         public override Guid ComponentGuid => new Guid("01df7804-29cd-4520-98df-a2d2e6835585");
     }

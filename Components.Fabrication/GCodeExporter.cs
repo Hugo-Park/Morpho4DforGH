@@ -187,8 +187,8 @@ namespace _Morpho4D
             }
             return pts;
         }
-
-        protected override Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("GCodeExporter");
         public override Guid ComponentGuid => new Guid("09be29b1-c1f1-422e-929e-279e37e11c73");
     }
 }
+

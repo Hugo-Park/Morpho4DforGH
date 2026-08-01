@@ -205,8 +205,8 @@ namespace _Morpho4D
             for (int i = 0; i < n; i++) { x += pts[i].X; y += pts[i].Y; z += pts[i].Z; }
             return new Point3d(x / n, y / n, z / n);
         }
-
-        protected override Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("ValidationOverlay");
         public override Guid ComponentGuid => new Guid("3c10865b-6880-472b-867d-d7243c6d43f2");
     }
 }
+

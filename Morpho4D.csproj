@@ -43,4 +43,11 @@
     <PackageReference Include="System.Drawing.Common" Version="7.0.0" ExcludeAssets="runtime" />
   </ItemGroup>
 
+<!-- Icon Resources -->
+ <ItemGroup>
+   <EmbeddedResource Include="Resources\*.png">
+     <Value>True</Value>
+   </EmbeddedResource>
+ </ItemGroup>
+
 </Project>

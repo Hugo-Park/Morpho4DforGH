@@ -49,8 +49,8 @@ namespace _Morpho4D
             DA.SetData(0, mat);
             DA.SetDataList(1, info);
         }
-
-        protected override Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("ConstructPLA");
         public override Guid ComponentGuid => new Guid("7c5ed220-a983-4ade-a54f-e0c488ffeadb");
     }
 }
+

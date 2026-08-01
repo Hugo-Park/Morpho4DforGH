@@ -275,9 +275,9 @@ namespace _Morpho4D
                 Pass = pass
             };
         }
-
-        protected override Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("GradientCheck");
 
         public override Guid ComponentGuid => new Guid("fd85251c-087b-4d99-8d68-91793fdbd3ac");
     }
 }
+

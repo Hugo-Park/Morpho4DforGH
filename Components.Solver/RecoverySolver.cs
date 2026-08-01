@@ -125,8 +125,8 @@ namespace _Morpho4D
             DA.SetDataList(2, resultGoos);
             DA.SetData(3, diagMsg);
         }
-
-        protected override Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("RecoverySolver");
         public override Guid ComponentGuid => new Guid("a7c51984-2a62-4f7b-91d5-88a2c1f9d443");
     }
 }
+

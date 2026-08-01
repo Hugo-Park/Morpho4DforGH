@@ -46,8 +46,7 @@ namespace _Morpho4D
 
             DA.SetData(0, materialBase);
         }
-
-        protected override System.Drawing.Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("MaterialBaseComponent");
 
         public override Guid ComponentGuid => new Guid("4D9A74AE-1EDE-4098-BD0C-D3AD512706F0");
     }

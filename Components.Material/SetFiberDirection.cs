@@ -83,8 +83,8 @@ namespace _Morpho4D
             DA.SetDataList(0, outGoos);
             DA.SetData(1, updated);
         }
-
-        protected override Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("SetFiberDirection");
         public override Guid ComponentGuid => new Guid("5fb060cd-157c-4abb-9f82-4e83c1cba00a");
     }
 }
+

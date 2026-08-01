@@ -107,8 +107,8 @@ namespace _Morpho4D
             }
             return result;
         }
-
-        protected override Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("SimulationPlayer");
         public override Guid ComponentGuid => new Guid("8519efd0-7634-41bc-843d-84bf4d7a33d4");
     }
 }
+

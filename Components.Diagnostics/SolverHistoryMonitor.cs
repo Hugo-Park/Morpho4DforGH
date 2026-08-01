@@ -70,8 +70,8 @@ namespace _Morpho4D
             DA.SetData(2, hist.Count);
             DA.SetData(3, status);
         }
-
-        protected override Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("SolverHistoryMonitor");
         public override Guid ComponentGuid => new Guid("d6613b57-ae15-45c6-80b8-53792ba90ce1");
     }
 }
+

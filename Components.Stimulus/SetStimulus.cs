@@ -53,8 +53,7 @@ namespace _Morpho4D
             DA.SetData(0, stimulus);
             DA.SetDataList(1, statList);
         }
-
-        protected override System.Drawing.Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("SetStimulus");
 
         public override Guid ComponentGuid => new Guid("628e18af-effc-4e34-8861-37691c186fbb");
     }

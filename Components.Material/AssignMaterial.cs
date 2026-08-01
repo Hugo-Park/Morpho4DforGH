@@ -78,8 +78,8 @@ namespace _Morpho4D
             DA.SetDataList(0, outGoos);
             DA.SetData(1, assigned);
         }
-
-        protected override Bitmap Icon => null;
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("AssignMaterial");
         public override Guid ComponentGuid => new Guid("762b5bda-2599-4cc2-b1d8-3e61f5b0685a");
     }
 }
+
