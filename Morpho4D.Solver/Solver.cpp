@@ -1,9 +1,14 @@
 #include <cmath>
 #include <vector>
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 
+#ifdef _WIN32
 #define DLLEXPORT extern "C" __declspec(dllexport)
-
+#else
+#define DLLEXPORT extern "C" __attribute__((visibility("default")))
+#endif
 const double PI = 3.14159265358979323846;
 
 struct Vector3 {

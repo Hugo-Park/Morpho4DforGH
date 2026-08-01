@@ -57,7 +57,7 @@ namespace Morpho4D.Solver
         public List<Hinge> allHinges = new List<Hinge>();
         public List<VoxelPair> allPairs = new List<VoxelPair>();
 
-        [DllImport("MorphoSolverCpp.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("MorphoSolverCpp", CallingConvention = CallingConvention.Cdecl)]
         public static extern void OptimizeMorpho(
             int numVoxels, double[] coords, int[] isFixed, double[] loads,
             int numSprings, int[] springIds, double[] springParams,
