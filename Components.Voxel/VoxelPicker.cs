@@ -50,8 +50,7 @@ namespace _Morpho4D
             DA.SetData(0, centerPoint);
             DA.SetDataList(1, statList);
         }
-
-        protected override System.Drawing.Bitmap Icon => IconLoader.Get("VoxelPicker");
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("VoxelPicker");
 
         public override Guid ComponentGuid => new Guid("20B11023-DA29-4A23-8803-C6D4AF86F7CE");
     }

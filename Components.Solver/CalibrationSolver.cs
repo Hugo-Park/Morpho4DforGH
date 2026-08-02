@@ -152,8 +152,8 @@ namespace _Morpho4D
             R = center.DistanceTo(a);
             return true;
         }
-
-        protected override Bitmap Icon => IconLoader.Get("CalibrationSolver");
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("CalibrationSolver");
         public override Guid ComponentGuid => new Guid("62e472c9-d074-4e6d-91f0-1c2eede9943c");
     }
 }
+

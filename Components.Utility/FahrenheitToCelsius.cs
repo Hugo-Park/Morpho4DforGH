@@ -16,6 +16,9 @@ namespace _Morpho4D
         {
         }
 
+        public override GH_Exposure Exposure => GH_Exposure.hidden;
+        public override bool Obsolete => true;
+
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
             pManager.AddNumberParameter("\u00B0F", "\u00B0F", "Temperature in Fahrenheit", GH_ParamAccess.item, 0.0);
@@ -36,8 +39,7 @@ namespace _Morpho4D
 
             DA.SetData(0, Math.Round(selTemp, 2));
         }
-
-        protected override System.Drawing.Bitmap Icon => IconLoader.Get("FahrenheitToCelsius");
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("FahrenheitToCelsius");
 
         public override Guid ComponentGuid => new Guid("6ABC5074-64ED-4F9C-A630-65D7B1629E24");
     }

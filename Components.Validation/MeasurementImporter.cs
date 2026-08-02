@@ -156,8 +156,8 @@ namespace _Morpho4D
             R = center.DistanceTo(a);
             return true;
         }
-
-        protected override Bitmap Icon => IconLoader.Get("MeasurementImporter");
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("MeasurementImporter");
         public override Guid ComponentGuid => new Guid("29b4b1a3-9e8d-4239-a7dd-339aa93dcd8d");
     }
 }
+

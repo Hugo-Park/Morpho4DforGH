@@ -26,12 +26,6 @@
     <PackageReference Include="Grasshopper" Version="8.0.23304.9001" ExcludeAssets="runtime" />
     <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
   </ItemGroup>
-
-  <!-- Component icons embedded into the assembly and loaded via IconLoader. -->
-  <ItemGroup>
-    <None Remove="Resources\*.png" />
-    <EmbeddedResource Include="Resources\*.png" />
-  </ItemGroup>
   
   <!-- For Windows only builds -->
   <PropertyGroup Condition="$(TargetFramework.Contains('-windows')) or $(TargetFramework.StartsWith('net4'))">
@@ -48,5 +42,12 @@
     <Reference Include="$(PkgMicrosoft_NETFramework_ReferenceAssemblies_net48)\build\.NETFramework\v4.8\System.Windows.Forms.dll" Private="False" />
     <PackageReference Include="System.Drawing.Common" Version="7.0.0" ExcludeAssets="runtime" />
   </ItemGroup>
+
+<!-- Icon Resources -->
+ <ItemGroup>
+   <EmbeddedResource Include="Resources\*.png">
+     <Value>True</Value>
+   </EmbeddedResource>
+ </ItemGroup>
 
 </Project>

@@ -62,8 +62,8 @@ namespace _Morpho4D
             DA.SetDataList(1, times);
             DA.SetData(2, progress);
         }
-
-        protected override Bitmap Icon => IconLoader.Get("SimulationTimer");
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("SimulationTimer");
         public override Guid ComponentGuid => new Guid("a27ac3c8-91ea-4a57-849e-752db859785b");
     }
 }
+

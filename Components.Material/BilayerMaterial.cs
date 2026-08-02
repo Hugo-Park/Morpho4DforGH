@@ -94,8 +94,8 @@ namespace _Morpho4D
             DA.SetData(1, nA);
             DA.SetData(2, nP);
         }
-
-        protected override Bitmap Icon => IconLoader.Get("BilayerMaterial");
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("BilayerMaterial");
         public override Guid ComponentGuid => new Guid("1bf4606b-2bf4-4b2d-9057-6f13c79411f7");
     }
 }
+

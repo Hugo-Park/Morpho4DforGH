@@ -81,7 +81,8 @@ namespace Morpho4D.Models
             voxel.activationFraction = Math.Max(0.0, Math.Min(1.0, frac));
 
             voxel.expansionForce = 1.0;
-            // G1: hinge targetAngle 고정 로직 완전 제거
+            
+            // G1: 힌지 각도 고정 로직 제거 (본래 모델링된 형태가 영구 형상이 됨)
         }
 
         /*생성자*/

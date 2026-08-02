@@ -22,7 +22,7 @@ namespace _Morpho4D
             pManager.AddGenericParameter("Material", "M", "Material to assign", GH_ParamAccess.item);
             pManager.AddBrepParameter("Region", "R",
                 "Brep region to assign material. If not provided, applies to all voxels.",
-                GH_ParamAccess.item);
+                GH_ParamAccess.list);
             pManager[2].Optional = true;
             pManager.AddBooleanParameter("Active", "A",
                 "Whether to mark this material as an active (SMP) material", GH_ParamAccess.item, false);
@@ -39,12 +39,12 @@ namespace _Morpho4D
         {
             var voxelGoos = new List<VoxelCellGoo>();
             Material mat = null;
-            Brep region = null;
+            List<Brep> regions = new List<Brep>();
             bool isActive = false;
 
             if (!DA.GetDataList(0, voxelGoos)) return;
             if (!DA.GetData(1, ref mat)) return;
-            DA.GetData(2, ref region);
+            DA.GetDataList(2, regions);
             DA.GetData(3, ref isActive);
 
             int assigned = 0;
@@ -55,8 +55,15 @@ namespace _Morpho4D
                 if (g?.Value == null) continue;
                 var v = g.Value;
 
-                bool inRegion = (region == null)
-                    || region.IsPointInside(v.initialPoint, 0.01, true);
+                bool inRegion = (regions.Count == 0);
+                if (!inRegion) {
+                    foreach (var r in regions) {
+                        if (r != null && r.IsPointInside(v.initialPoint, 0.01, false)) {
+                            inRegion = true;
+                            break;
+                        }
+                    }
+                }
 
                 if (inRegion)
                 {
@@ -71,8 +78,8 @@ namespace _Morpho4D
             DA.SetDataList(0, outGoos);
             DA.SetData(1, assigned);
         }
-
-        protected override Bitmap Icon => IconLoader.Get("AssignMaterial");
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("AssignMaterial");
         public override Guid ComponentGuid => new Guid("762b5bda-2599-4cc2-b1d8-3e61f5b0685a");
     }
 }
+

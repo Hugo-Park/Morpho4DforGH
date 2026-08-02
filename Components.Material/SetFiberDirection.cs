@@ -23,6 +23,9 @@ namespace _Morpho4D
                 "Fiber direction unit vector. Normalized automatically.", GH_ParamAccess.item, Vector3d.XAxis);
             pManager.AddNumberParameter("Eps Max", "ε",
                 "Maximum eigenstrain (maximum strain when activation is complete). Negative for shrinkage.", GH_ParamAccess.item, 0.0);
+            pManager.AddBrepParameter("Region", "R",
+                "Brep regions to selectively assign fiber direction. If empty, applies to all active voxels.", GH_ParamAccess.list);
+            pManager[3].Optional = true;
         }
 
         protected override void RegisterOutputParams(GH_OutputParamManager pManager)
@@ -36,10 +39,12 @@ namespace _Morpho4D
             var voxelGoos = new List<VoxelCellGoo>();
             Vector3d fiberDir = Vector3d.XAxis;
             double epsMax = 0.0;
+            List<Brep> regions = new List<Brep>();
 
             if (!DA.GetDataList(0, voxelGoos)) return;
             DA.GetData(1, ref fiberDir);
             DA.GetData(2, ref epsMax);
+            DA.GetDataList(3, regions);
 
             if (fiberDir.Length < 1e-9)
             {
@@ -55,7 +60,18 @@ namespace _Morpho4D
             {
                 if (g?.Value == null) continue;
                 var v = g.Value;
-                if (v.isActive)
+                
+                bool inRegion = (regions.Count == 0);
+                if (!inRegion) {
+                    foreach (var r in regions) {
+                        if (r != null && r.IsPointInside(v.initialPoint, 0.01, false)) {
+                            inRegion = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (v.isActive && inRegion)
                 {
                     v.fiberDir = fiberDir;
                     v.epsMax = epsMax;
@@ -67,8 +83,8 @@ namespace _Morpho4D
             DA.SetDataList(0, outGoos);
             DA.SetData(1, updated);
         }
-
-        protected override Bitmap Icon => IconLoader.Get("SetFiberDirection");
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("SetFiberDirection");
         public override Guid ComponentGuid => new Guid("5fb060cd-157c-4abb-9f82-4e83c1cba00a");
     }
 }
+

@@ -18,8 +18,8 @@ namespace _Morpho4D
         /// new tabs/panels will automatically be created.
         /// </summary>
         public SetStimulus()
-          : base("SetStimulusTest(HeatStim)", "Nickname",
-            "Stimulus Test(HeatStim)",
+          : base("Set Heat Stimuulus", "HS",
+            "Sets temperature for heat stimulus",
             "Morpho4D", "03 Stimulus")
         {
         }
@@ -53,8 +53,7 @@ namespace _Morpho4D
             DA.SetData(0, stimulus);
             DA.SetDataList(1, statList);
         }
-
-        protected override System.Drawing.Bitmap Icon => IconLoader.Get("SetStimulus");
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("SetStimulus");
 
         public override Guid ComponentGuid => new Guid("628e18af-effc-4e34-8861-37691c186fbb");
     }

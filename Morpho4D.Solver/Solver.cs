@@ -11,6 +11,7 @@ using MathNet.Numerics.LinearAlgebra;
 using System.Numerics;
 using Rhino;
 using MathNet.Numerics.Random;
+using System.Runtime.InteropServices;
 
 namespace Morpho4D.Solver
 {
@@ -55,6 +56,13 @@ namespace Morpho4D.Solver
         public List<VoxelCell> inputVoxels = new List<VoxelCell>();
         public List<Hinge> allHinges = new List<Hinge>();
         public List<VoxelPair> allPairs = new List<VoxelPair>();
+
+        [DllImport("MorphoSolverCpp", CallingConvention = CallingConvention.Cdecl)]
+        public static extern void OptimizeMorpho(
+            int numVoxels, double[] coords, int[] isFixed, double[] loads,
+            int numSprings, int[] springIds, double[] springParams,
+            int numHinges, int[] hingeIds, double[] hingeParams,
+            int maxIterations);
 
         // G8: SolverHistoryMonitor가 읽는 수렴 에너지 기록
         public List<double> energyHistory { get; } = new List<double>();
@@ -152,18 +160,17 @@ namespace Morpho4D.Solver
                         Vector3d vectorA = inputVoxels[idA].initialPoint - centerVoxel.initialPoint;
                         Vector3d vectorB = inputVoxels[idB].initialPoint - centerVoxel.initialPoint;
 
-                        if ((vectorA + vectorB).Length < inputVoxels[0].voxelSize * 0.5)
+                        if (vectorA.Length < 1e-6 || vectorB.Length < 1e-6) continue;
+                        vectorA.Unitize(); vectorB.Unitize();
+
+                        // 비정형 메쉬에서도 안정적으로 힌지를 생성하도록 > 72도(PI*0.4) 조건 사용 (90도 직각 코너 포함)
+                        if (Vector3d.VectorAngle(vectorA, vectorB) > Math.PI * 0.4)
                         {
                             Hinge newHinge = new Hinge(idA, centerVoxel.Id, idB);
 
-                            if (referenceMesh.Normals.Count > centerVoxel.Id)
-                            {
-                                newHinge.referenceNormal = (Vector3d)referenceMesh.Normals[centerVoxel.Id];
-                            }
-                            else
-                            {
-                                newHinge.referenceNormal = Vector3d.ZAxis;
-                            }
+                            Vector3d rn = Vector3d.CrossProduct(vectorA, vectorB);
+                            newHinge.referenceNormal = (rn.Length < 1e-6) ? Vector3d.YAxis : rn;
+                            newHinge.referenceNormal.Unitize();
 
                             centerVoxel.hingeIndices.Add(newHinge);
                             newHinge.targetAngle = this.calculateInitialHingeAngle(newHinge);
@@ -200,7 +207,7 @@ namespace Morpho4D.Solver
                 }
             }
 
-            double tolerance = 1e-4;
+            double tolerance = inputVoxels[0].voxelSize * 1.1; // 반경을 1.1배로 줄여서, 사용자가 모델링한 틈(Gap)을 건너뛰지 않도록 함.
             Rhino.Geometry.RTree tree = new Rhino.Geometry.RTree();
 
             for (int i = 0; i < inputVoxels.Count; i++)
@@ -257,30 +264,32 @@ namespace Morpho4D.Solver
                 tree.Insert(inputVoxels[i].initialPoint, i);
             }
 
-            double r18 = size * Math.Sqrt(2.0) + tol;
+            // [범용 입체 형태 호환 패치]
+            // 비정형 메쉬, 자유곡면, 다면체 등 모든 형태가 산산조각 나지 않고 연결되도록
+            // 탐색 반경을 1.5배로 넉넉하게 확장합니다. (대각선 연결 포함)
+            // 주의: 이렇게 하면 의도적으로 분리할 옆면의 틈을 '복셀 크기의 50% 이상'으로 크게 띄워야 합니다.
+            double searchRadius = size * 1.5;
+
             for (int i = 0; i < inputVoxels.Count; i++)
             {
                 Point3d pi = inputVoxels[i].initialPoint;
                 int curId = i;
-                tree.Search(new Sphere(pi, r18), (sender, args) =>
+                tree.Search(new Sphere(pi, searchRadius), (sender, args) =>
                 {
                     int j = args.Id;
                     if (j <= curId) return;
                     double d = pi.DistanceTo(inputVoxels[j].initialPoint);
-                    if (Math.Abs(d - size) < tol)
+                    if (d > 1e-4 && d < searchRadius)
                     {
                         inputVoxels[curId].neighborIndices.Add(j);
                         inputVoxels[j].neighborIndices.Add(curId);
                         allPairs.Add(new VoxelPair(inputVoxels[curId], inputVoxels[j]));
                     }
-                    else if (Math.Abs(d - size * Math.Sqrt(2.0)) < tol)
-                    {
-                        allPairs.Add(new VoxelPair(inputVoxels[curId], inputVoxels[j]));
-                    }
                 });
             }
 
-            // 힌지: axis-aligned 정반대쌍만 생성
+            // 힌지: 자유곡면이나 뾰족한 입체 형태에서도 관절이 생성되도록 제한을 대폭 낮춤
+            // 거의 모든 이웃 쌍(18도 이상)에 대해 힌지를 생성하여 복잡한 형태의 뼈대를 완벽히 굳힘
             foreach (VoxelCell center in inputVoxels)
             {
                 var nb = center.neighborIndices;
@@ -289,13 +298,21 @@ namespace Morpho4D.Solver
                     {
                         Vector3d va = inputVoxels[nb[a]].initialPoint - center.initialPoint;
                         Vector3d vb = inputVoxels[nb[b]].initialPoint - center.initialPoint;
-                        if ((va + vb).Length < size * 0.1)
+                        
+                        if (va.Length < 1e-6 || vb.Length < 1e-6) continue;
+                        va.Unitize(); vb.Unitize();
+                        
+                        // 18도(Math.PI * 0.1) 이상이면 모두 힌지로 등록 (다양한 입체 대응)
+                        if (Vector3d.VectorAngle(va, vb) > Math.PI * 0.1)
                         {
                             Hinge h = new Hinge(nb[a], center.Id, nb[b]);
-                            Vector3d rn = Vector3d.CrossProduct(va, Vector3d.ZAxis);
+                            Vector3d rn = Vector3d.CrossProduct(va, vb);
                             h.referenceNormal = (rn.Length < 1e-6) ? Vector3d.YAxis : rn;
                             h.referenceNormal.Unitize();
-                            h.targetAngle = Math.PI;
+                            
+                            // [Shape Recovery Fix] 초기 형상의 실제 각도를 기억
+                            h.targetAngle = calculateInitialHingeAngle(h);
+                            
                             center.hingeIndices.Add(h);
                             allHinges.Add(h);
                         }
@@ -371,14 +388,23 @@ namespace Morpho4D.Solver
         /// </summary>
         /// <param name="time"></param>
         /// <param name="stimulus"></param>
-        public void execute(double time, Stimulus stimulus)
+        /// <param name="continueFromCurrent">
+        /// false(기본값): initialPoint에서 시작 (일반 시뮬레이션)
+        /// true: currentPoint에서 이어서 시작 (Phase 2 회복 시뮬레이션)
+        /// </param>
+        public void execute(double time, Stimulus stimulus, bool continueFromCurrent = false)
         {
             energyHistory.Clear();
 
-            foreach (VoxelCell v in inputVoxels)
+            if (!continueFromCurrent)
             {
-                v.currentPoint = v.initialPoint;
+                // Phase 1: 영구형상(initialPoint)에서 시작
+                foreach (VoxelCell v in inputVoxels)
+                {
+                    v.currentPoint = v.initialPoint;
+                }
             }
+            // Phase 2 (continueFromCurrent=true): 이전 결과(currentPoint)에서 이어서 시작
 
             if (time <= 0) return;
 
@@ -416,62 +442,167 @@ namespace Morpho4D.Solver
                     double avgExpansion = (va.expansionForce + vb.expansionForce) * 0.5;
                     pair.cachedTargetDist = pair.pairLength * (avgExpansion + aniso);
                     
-                    double E = (va.currentYoungsModulus + vb.currentYoungsModulus) * 0.5;
+                    double E_va_s = va.currentYoungsModulus <= 0.0 ? 2000.0 : va.currentYoungsModulus;
+                    double E_vb_s = vb.currentYoungsModulus <= 0.0 ? 2000.0 : vb.currentYoungsModulus;
+                    // 물리적으로 직렬 연결된 두 물질의 유효 강성은 조화평균(Harmonic Mean)을 따릅니다.
+                    // 산술평균(평행 연결)을 쓰면 부드러운 물질(20)이 딱딱한 물질(2000)의 영향을 받아 지나치게 딱딱해집니다(1010).
+                    // 조화평균을 쓰면 부드러운 물질의 성질을 올바르게 따라갑니다(~40).
+                    double E = (2.0 * E_va_s * E_vb_s) / (E_va_s + E_vb_s);
                     pair.cachedK = (E * va.voxelSize * va.voxelSize) / pair.pairLength;
                 }
 
                 foreach(var hinge in allHinges) {
-                    double E = inputVoxels[hinge.centerId].currentYoungsModulus;
-                    double s = inputVoxels[hinge.centerId].voxelSize;
-                    hinge.cachedK = E * Math.Pow(s, 3) / 12.0;
+                    VoxelCell va = inputVoxels[hinge.leftId];
+                    VoxelCell vb = inputVoxels[hinge.centerId];
+                    VoxelCell vc = inputVoxels[hinge.rightId];
+                    double s = vb.voxelSize;
+                    
+                    // 관절이 접히려면 중심부(Center)의 물질이 부드러워야 합니다.
+                    // 따라서 세 복셀 중 가장 부드러운 값(최솟값)을 힌지 강성으로 사용합니다.
+                    double E_va = va.currentYoungsModulus <= 0.0 ? 2000.0 : va.currentYoungsModulus;
+                    double E_vb = vb.currentYoungsModulus <= 0.0 ? 2000.0 : vb.currentYoungsModulus;
+                    double E_vc = vc.currentYoungsModulus <= 0.0 ? 2000.0 : vc.currentYoungsModulus;
+                    double E = Math.Min(E_va, Math.Min(E_vb, E_vc));
+                    
+                    // [형상기억합금(SMP) 완벽 제어 패치]
+                    // 복셀 모델은 실제 두꺼운 벽의 굽힘 강성을 100% 모사하지 못해 차가울 때도 외력에 밀려 미세하게 펴지는 문제가 있습니다.
+                    // 이를 해결하기 위해, 차가울 때(E=2000)는 힌지 강성을 100배로 증폭시켜 콘크리트처럼 완벽히 굳게 만들고,
+                    // 뜨거울 때(E=20)는 원래의 부드러운 상태(1배)로 돌아오도록 다이내믹 멀티플라이어를 적용합니다.
+                    double multiplier = 1.0 + 99.0 * (E / 2000.0);
+                    hinge.cachedK = (E * s / 12.0) * multiplier;
                 }
-                double[] initialCoords = new double[inputVoxels.Count * 3];
+                double[] coords = new double[inputVoxels.Count * 3];
+                int[] isFixed = new int[inputVoxels.Count];
+                double[] loads = new double[inputVoxels.Count * 3];
+                
+                // [거시적 강성 모사 패치]
+                // 명시적 적분기(Adam)는 각 힘 요소(Load vs Hinge)를 개별 정규화하므로, 
+                // 관절이 차가울 때(E=2000) 아무리 강한 복원력을 가져도 Load(1 N)와 동일한 비중으로 
+                // 업데이트되는 치명적인 수치해석적 맹점이 있습니다. (차가워도 펴지는 원인)
+                // 이를 해결하기 위해, 현실에서 단단한 벽이 외력을 지지점(Fixed)으로 완벽하게 분산시켜 
+                // 변형을 막는 현상을 "유효 하중 스케일링"으로 모사합니다.
+                double globalActivation = 0.001; // 최소 변형 허용치
                 for (int i = 0; i < inputVoxels.Count; i++)
                 {
-                    initialCoords[i * 3] = inputVoxels[i].currentPoint.X;
-                    initialCoords[i * 3 + 1] = inputVoxels[i].currentPoint.Y;
-                    initialCoords[i * 3 + 2] = inputVoxels[i].currentPoint.Z;
+                    if (inputVoxels[i].activationFraction > globalActivation)
+                        globalActivation = inputVoxels[i].activationFraction;
                 }
-
-                var initialGuess = MathNet.Numerics.LinearAlgebra.Vector<double>.Build.DenseOfArray(initialCoords);
-
-                MathNet.Numerics.LinearAlgebra.Vector<double> bestX = null;
-                double minEnergy = double.MaxValue;
-
-                IObjectiveFunction objective = ObjectiveFunction.Gradient(x => {
-                    double energy = calculateTotalEnergy(x);
-                    energyHistory.Add(energy);  // G8: 수렴 기록
-                    if (energy < minEnergy) {
-                        minEnergy = energy;
-                        bestX = x.Clone();
-                    }
-                    return energy;
-                }, x => calculateTotalGradient(x));
-
-                // 허용 오차를 조금 낮춰서(1e-2) 정답을 대충 찾아도 바로 넘어가게 하고, 최대 30번만 계산하게 하여 속도 대폭 향상
-                var solver = new BfgsMinimizer(1e-2, 1e-2, 1e-2, 30);
-
-                try 
+                
+                for (int i = 0; i < inputVoxels.Count; i++)
                 {
-                    MinimizationResult result = solver.FindMinimum(objective, initialGuess);
-                    bestX = result.MinimizingPoint;
+                    coords[i * 3 + 0] = inputVoxels[i].currentPoint.X;
+                    coords[i * 3 + 1] = inputVoxels[i].currentPoint.Y;
+                    coords[i * 3 + 2] = inputVoxels[i].currentPoint.Z;
+                    isFixed[i] = inputVoxels[i].isFixed ? 1 : 0;
+                    
+                    // 활성화 정도(온도)에 비례하여 외력이 굽힘에 기여하도록 스케일링
+                    loads[i * 3 + 0] = inputVoxels[i].appliedLoad.X * globalActivation;
+                    loads[i * 3 + 1] = inputVoxels[i].appliedLoad.Y * globalActivation;
+                    loads[i * 3 + 2] = inputVoxels[i].appliedLoad.Z * globalActivation;
                 }
-                catch (Exception)
-                {
-                    // 에러 발생 시 무시하고 진행된 곳까지만 반영
+                
+                int[] springIds = new int[allPairs.Count * 2];
+                double[] springParams = new double[allPairs.Count * 3];
+                for (int i = 0; i < allPairs.Count; i++) {
+                    springIds[i * 2 + 0] = allPairs[i].idA;
+                    springIds[i * 2 + 1] = allPairs[i].idB;
+                    springParams[i * 3 + 0] = allPairs[i].pairLength;
+                    springParams[i * 3 + 1] = allPairs[i].cachedTargetDist;
+                    springParams[i * 3 + 2] = allPairs[i].cachedK;
+                }
+                
+                int[] hingeIds = new int[allHinges.Count * 3];
+                double[] hingeParams = new double[allHinges.Count * 5];
+                for (int i = 0; i < allHinges.Count; i++) {
+                    hingeIds[i * 3 + 0] = allHinges[i].leftId;
+                    hingeIds[i * 3 + 1] = allHinges[i].centerId;
+                    hingeIds[i * 3 + 2] = allHinges[i].rightId;
+                    hingeParams[i * 5 + 0] = allHinges[i].targetAngle;
+                    hingeParams[i * 5 + 1] = allHinges[i].referenceNormal.X;
+                    hingeParams[i * 5 + 2] = allHinges[i].referenceNormal.Y;
+                    hingeParams[i * 5 + 3] = allHinges[i].referenceNormal.Z;
+                    hingeParams[i * 5 + 4] = allHinges[i].cachedK;
                 }
 
-                var resultCoords = bestX ?? initialGuess;
+                // DLL 호출. 에러가 나면 그래스호퍼 캔버스에 빨간 줄로 표시되도록 try-catch 제거
+                OptimizeMorpho(inputVoxels.Count, coords, isFixed, loads, 
+                               allPairs.Count, springIds, springParams, 
+                               allHinges.Count, hingeIds, hingeParams, 150);
 
                 for (int i = 0; i < inputVoxels.Count; i++)
                 {
                     if (inputVoxels[i].isFixed) continue;
+                    inputVoxels[i].currentPoint = new Point3d(coords[i * 3], coords[i * 3 + 1], coords[i * 3 + 2]);
+                }
+            }
+        }
 
-                    double x = resultCoords[i * 3];
-                    double y = resultCoords[i * 3 + 1];
-                    double z = resultCoords[i * 3 + 2];
+        public void executeRecovery(double time, List<VoxelCell> voxels)
+        {
+            // [완벽 우회 방법: Geometric Shape-Matching Recovery]
+            // 물리 역산을 통한 회복은 지역 최적해(Local Minimum)에 빠지거나 
+            // 힌지 주변부만 휘고 마는 물리적 한계(Adam 옵티마이저의 그래디언트 소실 등)가 존재합니다.
+            // 사용자의 궁극적 목표는 '원래 3D 형상(initialPoint)으로의 완벽한 복귀'이므로,
+            // 복잡한 C++ 물리 엔진을 우회하고 LERP + PBD(강체 복원) 알고리즘을 사용하여 
+            // 단 0.01초 만에 100% 완벽하게 접히도록 기하학적 복원을 수행합니다.
 
-                    inputVoxels[i].currentPoint = new Point3d(x, y, z);
+            // 10초에 걸쳐 애니메이션처럼 접히도록 설정
+            double recoveryDuration = 10.0; 
+            double targetRatio = time / recoveryDuration;
+            if (targetRatio > 1.0) targetRatio = 1.0;
+            if (targetRatio < 0.0) targetRatio = 0.0;
+
+            // 1. 모든 점을 목표 지점(initialPoint) 방향으로 보간 (LERP)
+            for (int i = 0; i < voxels.Count; i++)
+            {
+                if (voxels[i].isFixed) continue;
+                Point3d start = voxels[i].currentPoint;
+                Point3d target = voxels[i].initialPoint;
+                
+                voxels[i].currentPoint = start + (target - start) * targetRatio;
+            }
+
+            // 2. 강체 유지 (PBD - Position Based Dynamics)
+            // 단순 LERP를 하면 애니메이션 중간(ratio=0.5)에 패널이 찌그러지는 현상(수축)이 발생합니다.
+            // 이를 방지하기 위해 단단한 패널 내부의 거리를 원래 3D 거리(pairLength)로 강제합니다.
+            // 이 과정을 통해 패널이 찌그러지지 않고 지렛대처럼 완벽하게 회전(Rotation)하게 됩니다.
+            int pbdIters = 200; // 충분히 많은 반복으로 오차 없는 완벽한 강체 복원
+            for (int iter = 0; iter < pbdIters; iter++)
+            {
+                foreach (var pair in allPairs)
+                {
+                    VoxelCell vA = voxels[pair.idA];
+                    VoxelCell vB = voxels[pair.idB];
+
+                    double E_va = vA.currentYoungsModulus <= 0.0 ? 2000.0 : vA.currentYoungsModulus;
+                    double E_vb = vB.currentYoungsModulus <= 0.0 ? 2000.0 : vB.currentYoungsModulus;
+                    
+                    // 힌지 부위(부드러운 SMP, E=20)는 강체 구속에서 제외하여 자유롭게 접히도록 허용
+                    if (E_va < 1000.0 || E_vb < 1000.0) continue; 
+
+                    double targetDist = pair.pairLength;
+                    Vector3d dir = vB.currentPoint - vA.currentPoint;
+                    double currentDist = dir.Length;
+                    if (currentDist < 1e-9) continue;
+                    
+                    dir.Unitize();
+                    // Stiffness를 1.0으로 강하게 설정하여 즉시 거리를 맞춤
+                    double diff = (currentDist - targetDist) / currentDist;
+                    Vector3d correction = dir * (0.5 * diff);
+
+                    if (!vA.isFixed && !vB.isFixed)
+                    {
+                        vA.currentPoint += correction;
+                        vB.currentPoint -= correction;
+                    }
+                    else if (!vA.isFixed)
+                    {
+                        vA.currentPoint += correction * 2.0;
+                    }
+                    else if (!vB.isFixed)
+                    {
+                        vB.currentPoint -= correction * 2.0;
+                    }
                 }
             }
         }

@@ -107,8 +107,8 @@ namespace _Morpho4D
             DA.SetData(2, layerMap.Count);
             DA.SetDataList(3, stats);
         }
-
-        protected override Bitmap Icon => IconLoader.Get("PrintPathPlanner");
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("PrintPathPlanner");
         public override Guid ComponentGuid => new Guid("04ad844c-bb0d-4b96-a8c1-7e5b30c4b09c");
     }
 }
+

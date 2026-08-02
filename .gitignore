@@ -4,7 +4,17 @@ obj/
 .vs/
 .vscode/
 *.gha
+*.ghx
+*.gh
 *.pdb
 packages/
 .DS_Store
 *.lscache
+*.lib
+*.exp
+*.obj
+*.bat
+*.png
+*.dll
+*.dylib
+*.sh

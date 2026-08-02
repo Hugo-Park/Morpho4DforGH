@@ -42,8 +42,7 @@ namespace _Morpho4D
             FicksModel model = new FicksModel(D, HMax, Cs);
             DA.SetData(0, model);
         }
-
-        protected override System.Drawing.Bitmap Icon => IconLoader.Get("DefineFicks");
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("DefineFicks");
 
         public override Guid ComponentGuid => new Guid("25EC8DE4-CD5C-4099-A03C-F9B056389EA5");
     }

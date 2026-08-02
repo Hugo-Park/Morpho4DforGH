@@ -106,8 +106,8 @@ namespace _Morpho4D
                 DA.SetData(0, $"ERROR: {ex.Message}");
             }
         }
-
-        protected override Bitmap Icon => IconLoader.Get("ViewportRecorder");
+        protected override System.Drawing.Bitmap Icon => _Morpho4D.IconLoader.Get("ViewportRecorder");
         public override Guid ComponentGuid => new Guid("5fe6803d-d2f3-474d-b8c2-1aa09bac39fa");
     }
 }
+
