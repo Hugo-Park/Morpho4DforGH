@@ -388,23 +388,16 @@ namespace Morpho4D.Solver
         /// </summary>
         /// <param name="time"></param>
         /// <param name="stimulus"></param>
-        /// <param name="continueFromCurrent">
-        /// false(기본값): initialPoint에서 시작 (일반 시뮬레이션)
-        /// true: currentPoint에서 이어서 시작 (Phase 2 회복 시뮬레이션)
         /// </param>
-        public void execute(double time, Stimulus stimulus, bool continueFromCurrent = false)
+        public void execute(double time, Stimulus stimulus)
         {
             energyHistory.Clear();
 
-            if (!continueFromCurrent)
+            // 영구형상(initialPoint)에서 시작
+            foreach (VoxelCell v in inputVoxels)
             {
-                // Phase 1: 영구형상(initialPoint)에서 시작
-                foreach (VoxelCell v in inputVoxels)
-                {
-                    v.currentPoint = v.initialPoint;
-                }
+                v.currentPoint = v.initialPoint;
             }
-            // Phase 2 (continueFromCurrent=true): 이전 결과(currentPoint)에서 이어서 시작
 
             if (time <= 0) return;
 

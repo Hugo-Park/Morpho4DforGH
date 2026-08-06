@@ -27,11 +27,7 @@ namespace _Morpho4D
             pManager.AddGenericParameter("Voxels", "VX", "List of Voxel objects", GH_ParamAccess.list);
             pManager.AddGenericParameter("Stimulus", "S", "External stimulus object (e.g., Temperature, Humidity) that triggers voxel deformation.", GH_ParamAccess.list);
             pManager.AddNumberParameter("Time", "T", "Simulation Time Step", GH_ParamAccess.item);
-            pManager.AddBooleanParameter("Continue", "C",
-                "If true, continues from current deformed positions instead of resetting to permanent shape. " +
-                "Use for Phase 2 (recovery) after applying deformation in Phase 1.",
-                GH_ParamAccess.item, false);
-            pManager[3].Optional = true;
+
         }
 
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
@@ -49,12 +45,12 @@ namespace _Morpho4D
             double time = 0;
             List<VoxelCellGoo> voxelGoos = new List<VoxelCellGoo>();
             List<Stimulus> stimulus = new List<Stimulus>();
-            bool continueFromCurrent = false;
+
 
             if (!DA.GetDataList(0, voxelGoos)) { return; }
             if (!DA.GetDataList(1, stimulus)) { return; }
             if (!DA.GetData(2, ref time)) { return; }
-            DA.GetData(3, ref continueFromCurrent);
+
 
             // 입력 필터
             if (stimulus.Count >= 2)
@@ -92,7 +88,7 @@ namespace _Morpho4D
             this.AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, diagMsg);
             DA.SetData(3, diagMsg);
 
-            solver.execute(time, stimulus[0], continueFromCurrent);
+            solver.execute(time, stimulus[0]);
             SolverHistoryMonitorComponent.RegisterSolver(solver);
 
             // 출력 점 리스트 생성

@@ -30,10 +30,7 @@ namespace _Morpho4D
             pManager.AddGenericParameter("Stimulus", "S", "Stimulus object", GH_ParamAccess.item);
             pManager.AddNumberParameter("Time", "T", "Current time (SimulationTimer output)", GH_ParamAccess.item, 0.0);
             pManager.AddBooleanParameter("Clear Cache", "CC", "If true, clears the cache", GH_ParamAccess.item, false);
-            pManager.AddBooleanParameter("Continue", "C",
-                "If true, continues from current deformed positions instead of resetting to permanent shape.",
-                GH_ParamAccess.item, false);
-            pManager[4].Optional = true;
+
         }
 
         protected override void RegisterOutputParams(GH_OutputParamManager pManager)
@@ -50,13 +47,13 @@ namespace _Morpho4D
             Stimulus stim = null;
             double time = 0.0;
             bool clearCache = false;
-            bool continueFromCurrent = false;
+
 
             if (!DA.GetDataList(0, voxelGoos)) return;
             if (!DA.GetData(1, ref stim)) return;
             DA.GetData(2, ref time);
             DA.GetData(3, ref clearCache);
-            DA.GetData(4, ref continueFromCurrent);
+
 
             if (clearCache) _cache.Clear();
 
@@ -68,14 +65,9 @@ namespace _Morpho4D
             int cacheKey = (int)(time * 100);
             if (!_cache.ContainsKey(cacheKey))
             {
-                // Simulate after initializing voxel states
-                if (!continueFromCurrent)
-                {
-                    foreach (var v in voxels) v.currentPoint = v.initialPoint;
-                }
                 var solver = new MorphoSolver(voxels);
                 solver.setUpFromGrid(voxels);
-                solver.execute(time, stim, continueFromCurrent);
+                solver.execute(time, stim);
 
                 var resultPts = solver.getResultPoints();
                 var mesh = BuildDeformedBoxMesh(voxels, resultPts);
