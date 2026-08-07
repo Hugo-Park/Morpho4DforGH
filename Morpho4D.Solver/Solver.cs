@@ -57,7 +57,7 @@ namespace Morpho4D.Solver
         public List<Hinge> allHinges = new List<Hinge>();
         public List<VoxelPair> allPairs = new List<VoxelPair>();
 
-        [DllImport("MorphoSolverCpp", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("MorphoSolver", CallingConvention = CallingConvention.Cdecl)]
         public static extern void OptimizeMorpho(
             int numVoxels, double[] coords, int[] isFixed, double[] loads,
             int numSprings, int[] springIds, double[] springParams,
@@ -77,7 +77,7 @@ namespace Morpho4D.Solver
         }
 
         /// <summary>
-        /// L-BFGS 이전의 전처리를 위한 함수
+        /// 물리 엔진(Adam) 이전의 전처리를 위한 함수
         /// </summary>
         /// <param name="createdVoxels"></param>
         /// <param name="referenceMesh"></param>
@@ -384,7 +384,7 @@ namespace Morpho4D.Solver
         }
 
         /// <summary>
-        /// L-BFGS를 사용하여 다음 복셀의 위치를 예상한다
+        /// 최적화 알고리즘(Adam)을 사용하여 다음 복셀의 위치를 계산한다
         /// </summary>
         /// <param name="time"></param>
         /// <param name="stimulus"></param>
@@ -638,7 +638,7 @@ namespace Morpho4D.Solver
         }
 
         /// <summary>
-        /// 각 복셀 좌표 변화에 따른 전체 에너지의 변화율을 계산하여 L-BFGS에 전달한다.
+        /// 각 복셀 좌표 변화에 따른 전체 에너지의 변화율을 계산하여 Adam 옵티마이저에 전달한다.
         /// </summary>
         /// <param name="x"></param>
         /// <returns></returns>

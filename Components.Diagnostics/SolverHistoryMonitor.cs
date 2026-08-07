@@ -8,14 +8,14 @@ using Morpho4D.Solver;
 namespace _Morpho4D
 {
     /// <summary>
-    /// Reads the L-BFGS convergence energy history of MorphoSolver and outputs it as a curve.
+    /// Reads the Adam optimization convergence energy history of MorphoSolver and outputs it as a curve.
     /// Use by connecting immediately after the execution of MorphoSolverComponent.
     /// </summary>
     public class SolverHistoryMonitorComponent : GH_Component
     {
         public SolverHistoryMonitorComponent()
           : base("Solver History Monitor", "SolvHist",
-              "Displays the L-BFGS convergence energy history. For paper figure production.",
+              "Displays the Adam convergence energy history. For paper figure production.",
               "Morpho4D", "05 Diagnostics")
         {
         }

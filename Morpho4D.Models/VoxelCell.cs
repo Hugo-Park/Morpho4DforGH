@@ -31,12 +31,9 @@ namespace Morpho4D.Models
         public double currentTemp { get; set; } = 25.0; // 초기 온도 (Smp 전용)
         public double currentHydration { get; set; } = 0.0; // 초기 흡수율 (Hydrogel 전용)
 
-        /*업데이트 될 물성 변수(L-BGFS Solver에 전달될 값)*/
+        /*업데이트 될 실시간 물성 변수*/
         public double currentYoungsModulus { get; set; } // 현재 강성
         public double expansionForce { get; set; } // Fick + Osmotic = Hydrogel의 실제 팽창력
-
-        /*Solver 연산용 데이터*/
-        public Vector3d gradient { get; set; }
 
         /*eigenstrain 비등방 활성변형 (G1)*/
         public Vector3d fiberDir { get; set; } = Vector3d.XAxis;
