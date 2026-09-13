@@ -39,7 +39,8 @@ DLLEXPORT void OptimizeMorpho(
     int numVoxels, double* coords, const int* isFixed, const double* loads,
     int numSprings, const int* springIds, const double* springParams,
     int numHinges, const int* hingeIds, const double* hingeParams,
-    int maxIterations
+    int maxIterations,
+    double* energyOut, int energyCapacity, int* energyCountOut
 ) {
     std::vector<Vector3> grad(numVoxels);
     
@@ -68,8 +69,13 @@ DLLEXPORT void OptimizeMorpho(
     if (minSpringLen > 1e8) minSpringLen = 1.0;
     double maxStep = minSpringLen * 0.1; // 한 스텝당 스프링 길이의 10%까지만 이동
 
+    int energyWritten = 0;
+
     for (int iter = 1; iter <= maxIterations; ++iter) {
-        
+
+        // [Adam 수렴 이력] 이번 반복 시작 시점(업데이트 전)의 스프링/힌지 탄성 에너지 합
+        double iterEnergy = 0.0;
+
         // 1. Force(물리적 힘) 배열 초기화 및 외부 하중 적용
         for (int i = 0; i < numVoxels; ++i) {
             grad[i] = Vector3(0, 0, 0);
@@ -83,11 +89,11 @@ DLLEXPORT void OptimizeMorpho(
         }
 
         // 2. 스프링 포스 계산 (OpenMP)
-        #pragma omp parallel for
+        #pragma omp parallel for reduction(+:iterEnergy)
         for (int i = 0; i < numSprings; ++i) {
             int a = springIds[i * 2 + 0];
             int b = springIds[i * 2 + 1];
-            
+
             // C# packing: [pairLength, cachedTargetDist, cachedK] (stride 3)
             double targetLength = springParams[i * 3 + 1];
             double k = springParams[i * 3 + 2];
@@ -99,8 +105,12 @@ DLLEXPORT void OptimizeMorpho(
 
             if (currentLength > 1e-9) {
                 dir.x /= currentLength; dir.y /= currentLength; dir.z /= currentLength;
-                double forceMag = k * (currentLength - targetLength);
+                double delta = currentLength - targetLength;
+                double forceMag = k * delta;
                 Vector3 force = dir * forceMag;
+
+                // 스프링 탄성 포텐셜 에너지: 0.5 * k * delta^2
+                iterEnergy += 0.5 * k * delta * delta;
 
                 #pragma omp atomic
                 grad[a].x += force.x;
@@ -119,7 +129,7 @@ DLLEXPORT void OptimizeMorpho(
         }
 
         // 3. 힌지 포스 계산 (OpenMP)
-        #pragma omp parallel for
+        #pragma omp parallel for reduction(+:iterEnergy)
         for (int i = 0; i < numHinges; ++i) {
             int L = hingeIds[i * 3 + 0];
             int C = hingeIds[i * 3 + 1];
@@ -144,8 +154,12 @@ DLLEXPORT void OptimizeMorpho(
                 Vector3 cCross = cross(vL, vR);
                 if (dot(cCross, refNorm) < 0) curAngle = 2.0 * PI - curAngle;
 
-                double torqueMag = k * (curAngle - targetAngle);
-                
+                double angleDelta = curAngle - targetAngle;
+                double torqueMag = k * angleDelta;
+
+                // 힌지 굽힘 포텐셜 에너지: 0.5 * k * angleDelta^2
+                iterEnergy += 0.5 * k * angleDelta * angleDelta;
+
                 Vector3 normal = cCross;
                 if (normal.length() < 1e-4) normal = refNorm;
                 else {
@@ -181,6 +195,12 @@ DLLEXPORT void OptimizeMorpho(
                 #pragma omp atomic
                 grad[R].z += fR.z;
             }
+        }
+
+        // [Adam 수렴 이력] 이번 반복의 총 탄성 에너지를 출력 버퍼에 기록
+        if (energyOut != nullptr && iter - 1 < energyCapacity) {
+            energyOut[iter - 1] = iterEnergy;
+            energyWritten = iter;
         }
 
         // 4. 물리적 상대 강성 보존 업데이트 (Momentum SGD + Gradient Clipping)
@@ -235,6 +255,8 @@ DLLEXPORT void OptimizeMorpho(
             coords[i * 3 + 2] -= step_z;
         }
     }
+
+    if (energyCountOut != nullptr) *energyCountOut = energyWritten;
 
     // 5. Post-Simulation PBD (완벽한 강체 복원)
     for (int pbd_iter = 0; pbd_iter < 50; ++pbd_iter) {

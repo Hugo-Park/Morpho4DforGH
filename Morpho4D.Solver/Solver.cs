@@ -62,7 +62,12 @@ namespace Morpho4D.Solver
             int numVoxels, double[] coords, int[] isFixed, double[] loads,
             int numSprings, int[] springIds, double[] springParams,
             int numHinges, int[] hingeIds, double[] hingeParams,
-            int maxIterations);
+            int maxIterations,
+            double[] energyOut, int energyCapacity, out int energyCount);
+
+        // 네이티브 OptimizeMorpho는 내부적으로 반복 횟수를 500으로 고정한다(Solver.cpp 참고).
+        // 여유를 두고 버퍼를 잡아 향후 반복 횟수가 늘어나도 잘리지 않게 한다.
+        private const int EnergyBufferCapacity = 1024;
 
         // G8: SolverHistoryMonitor가 읽는 수렴 에너지 기록
         public List<double> energyHistory { get; } = new List<double>();
@@ -518,9 +523,17 @@ namespace Morpho4D.Solver
                 }
 
                 // DLL 호출. 에러가 나면 그래스호퍼 캔버스에 빨간 줄로 표시되도록 try-catch 제거
-                OptimizeMorpho(inputVoxels.Count, coords, isFixed, loads, 
-                               allPairs.Count, springIds, springParams, 
-                               allHinges.Count, hingeIds, hingeParams, 150);
+                double[] energyBuffer = new double[EnergyBufferCapacity];
+                int energyCount;
+                OptimizeMorpho(inputVoxels.Count, coords, isFixed, loads,
+                               allPairs.Count, springIds, springParams,
+                               allHinges.Count, hingeIds, hingeParams, 150,
+                               energyBuffer, EnergyBufferCapacity, out energyCount);
+
+                for (int e = 0; e < energyCount; e++)
+                {
+                    energyHistory.Add(energyBuffer[e]);
+                }
 
                 for (int i = 0; i < inputVoxels.Count; i++)
                 {
